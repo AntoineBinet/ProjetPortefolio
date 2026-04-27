@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{ cd \"$CLAUDE_PROJECT_DIR\" && git add -A && ! git diff --cached --quiet && git commit -m \"auto: WIP from Claude Code session\" -q && git push origin main -q; } >>\"$CLAUDE_PROJECT_DIR/.claude/auto-push.log\" 2>&1; exit 0",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}

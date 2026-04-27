@@ -13,3 +13,7 @@ Thumbs.db
 
 # Config tunnel locale (chemins absolus user-spécifiques, généré par le bootstrap)
 mnwork.yml
+
+# Claude Code — permissions locales et log auto-push (déjà couvert par *.log mais explicite)
+.claude/settings.local.json
+.claude/auto-push.log
