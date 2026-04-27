@@ -23,6 +23,8 @@ import * as api from "./auth.js";
 import { renderCasinoMenu } from "./casino-menu.js";
 import { renderAdminDashboard } from "./admin.js";
 import { startBlackjack } from "./blackjack.js";
+import { startRoulette } from "./roulette.js";
+import { startMemory } from "./memory.js";
 
 /* ── État global du SPA ──────────────────────────────────── */
 
@@ -138,6 +140,8 @@ function route() {
   if (hash.startsWith("#/holdem/join/"))      return renderJoinFlow(root, hash.slice("#/holdem/join/".length));
   if (hash === "#/holdem/lobby")              return renderLobby(root);
   if (hash === "#/blackjack")                 return startBlackjackView(root);
+  if (hash === "#/roulette")                  return startRouletteView(root);
+  if (hash === "#/memory")                    return startMemoryView(root);
   if (hash === "#/admin")                     return renderAdmin(root);
   if (hash.startsWith("#/invite/"))           return renderInviteRedeem(root, hash.slice("#/invite/".length));
   if (hash === "#/login")                     return renderAdminLogin(root);
@@ -160,8 +164,10 @@ function renderHome(root) {
   renderCasinoMenu(root, {
     user: state.user,
     onPick: (gameId) => {
-      if (gameId === "holdem") location.hash = "#/holdem";
+      if (gameId === "holdem")         location.hash = "#/holdem";
       else if (gameId === "blackjack") location.hash = "#/blackjack";
+      else if (gameId === "roulette")  location.hash = "#/roulette";
+      else if (gameId === "memory")    location.hash = "#/memory";
     },
     onAdmin:    () => { location.hash = "#/admin"; },
     onSettings: () => { location.hash = "#/settings"; },
@@ -497,6 +503,54 @@ function startSolo(root) {
 }
 
 /* ── Blackjack ───────────────────────────────────────────── */
+
+function commitChipDelta(delta, reason) {
+  if (state.user && delta !== 0) {
+    return api.cashout(delta, reason).then(r => {
+      if (r.ok) state.user.chips = r.chips;
+    });
+  }
+}
+
+function startRouletteView(root) {
+  if (!state.user) {
+    const guestChips = parseInt(localStorage.getItem("casino.guest.chips") || "5000", 10);
+    const fakeUser = { id: "guest", name: state.settings.name, chips: guestChips, is_admin: false, avatar_seed: 0 };
+    return startRoulette(root, {
+      user: fakeUser, settings: state.settings,
+      onChipChange: (chips) => localStorage.setItem("casino.guest.chips", String(chips)),
+      onExit: () => location.hash = "#/",
+    });
+  }
+  startRoulette(root, {
+    user: state.user, settings: state.settings,
+    onChipChange: (chips, delta) => commitChipDelta(delta, "Roulette"),
+    onExit: async () => {
+      state.user = await api.fetchMe();
+      location.hash = "#/";
+    },
+  });
+}
+
+function startMemoryView(root) {
+  if (!state.user) {
+    const guestChips = parseInt(localStorage.getItem("casino.guest.chips") || "5000", 10);
+    const fakeUser = { id: "guest", name: state.settings.name, chips: guestChips, is_admin: false, avatar_seed: 0 };
+    return startMemory(root, {
+      user: fakeUser, settings: state.settings,
+      onChipChange: (chips) => localStorage.setItem("casino.guest.chips", String(chips)),
+      onExit: () => location.hash = "#/",
+    });
+  }
+  startMemory(root, {
+    user: state.user, settings: state.settings,
+    onChipChange: (chips, delta) => commitChipDelta(delta, "Memory"),
+    onExit: async () => {
+      state.user = await api.fetchMe();
+      location.hash = "#/";
+    },
+  });
+}
 
 function startBlackjackView(root) {
   if (!state.user) {

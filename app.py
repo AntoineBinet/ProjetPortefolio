@@ -54,6 +54,45 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("PORTFOLIO_SECRET") or secrets.token_hex(32)
 
 
+@app.before_request
+def _isolate_portfolio_from_casino_users():
+    """Cloison Portfolio ↔ Casino.
+
+    Tout utilisateur loggé côté Casino (cookie `casino_session`) est REDIRIGÉ
+    vers `/casino` s'il essaie d'accéder à une route Portfolio (landing,
+    /apps, /admin/*, /login, etc.). L'admin Portfolio (session Flask `user`)
+    garde un accès illimité car c'est lui qui héberge.
+
+    Les visiteurs anonymes (pas de cookie casino) accèdent normalement aux
+    pages publiques du Portfolio.
+
+    Routes JAMAIS interceptées :
+      - /casino/* (Casino)
+      - /api/deploy/* (mécanisme MAJ admin)
+      - /static/* (assets Portfolio)
+      - /favicon.ico, /robots.txt
+    """
+    p = request.path
+    if (p.startswith("/casino")
+            or p.startswith("/api/deploy")
+            or p.startswith("/static")
+            or p in ("/favicon.ico", "/robots.txt")):
+        return None
+    # Admin Portfolio : accès libre
+    if session.get("user"):
+        return None
+    # User Casino sans session Portfolio → redirect
+    cookie = request.cookies.get("casino_session")
+    if cookie:
+        try:
+            from Casino import casino_db
+            if casino_db.get_session(cookie):
+                return redirect("/casino", code=302)
+        except Exception:
+            pass
+    return None
+
+
 @app.after_request
 def _no_cache_html(resp):
     """Empêche le cache navigateur/CDN sur les pages HTML.

@@ -47,6 +47,11 @@ def db():
 
 
 SCHEMA = """
+CREATE TABLE IF NOT EXISTS kv_settings (
+  key   TEXT PRIMARY KEY,
+  value TEXT
+);
+
 CREATE TABLE IF NOT EXISTS users (
   id           TEXT PRIMARY KEY,
   name         TEXT NOT NULL UNIQUE,
@@ -384,3 +389,61 @@ def ensure_admin(name: str = "Antoine", chips: int = 100000) -> str:
         if row:
             return row["id"]
     return create_user(name, chips=chips, is_admin=True)
+
+
+# ── KV settings (mot de passe admin notamment) ────────────────────
+
+def kv_get(key: str) -> str | None:
+    with db() as cn:
+        row = cn.execute("SELECT value FROM kv_settings WHERE key=?", (key,)).fetchone()
+        return row["value"] if row else None
+
+
+def kv_set(key: str, value: str) -> None:
+    with db() as cn:
+        cn.execute(
+            "INSERT INTO kv_settings(key,value) VALUES(?,?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (key, value)
+        )
+
+
+def hash_password(password: str) -> str:
+    """Hash PBKDF2-SHA256 (100k itérations) avec salt aléatoire."""
+    import hashlib
+    salt = secrets.token_bytes(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100_000)
+    return f"pbkdf2_sha256$100000${salt.hex()}${dk.hex()}"
+
+
+def verify_password(password: str, stored: str) -> bool:
+    """Vérifie un mot de passe contre un hash stocké."""
+    if not stored or "$" not in stored:
+        return False
+    try:
+        algo, iters, salt_hex, dk_hex = stored.split("$")
+        if algo != "pbkdf2_sha256":
+            return False
+        import hashlib
+        salt = bytes.fromhex(salt_hex)
+        dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, int(iters))
+        return secrets.compare_digest(dk.hex(), dk_hex)
+    except Exception:
+        return False
+
+
+def set_admin_password(new_password: str) -> None:
+    kv_set("admin_password_hash", hash_password(new_password))
+
+
+def check_admin_password(password: str, env_fallback: str | None) -> bool:
+    """Vérifie le mdp admin :
+       1. Si un hash est stocké → utilise-le exclusivement (constante-temps).
+       2. Sinon, compare au fallback env (PORTFOLIO_PASS).
+    """
+    stored = kv_get("admin_password_hash")
+    if stored:
+        return verify_password(password, stored)
+    if env_fallback is None:
+        return False
+    return secrets.compare_digest(password.encode(), env_fallback.encode())

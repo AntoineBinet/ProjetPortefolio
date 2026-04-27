@@ -14,7 +14,10 @@ export function renderAdminDashboard(root, { onBack, onUserChanged }) {
           <button data-act="back" style="background:none;border:none;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.10em;text-transform:uppercase;color:#737373;padding:6px 0">← Casino</button>
           <h1 class="admin-h1">Espace admin</h1>
         </div>
-        <button data-act="new-invite" style="font:inherit;padding:9px 16px;border-radius:8px;background:#0a0a0a;color:#fbfaf7;border:none;cursor:pointer;font-size:13px;font-weight:500">+ Nouvelle invitation</button>
+        <div style="display:flex;gap:8px">
+          <button data-act="change-password" style="font:inherit;padding:9px 14px;border-radius:8px;background:#fbfaf7;color:#0a0a0a;border:1px solid rgba(0,0,0,0.10);cursor:pointer;font-size:13px;font-weight:500">Mot de passe</button>
+          <button data-act="new-invite" style="font:inherit;padding:9px 16px;border-radius:8px;background:#0a0a0a;color:#fbfaf7;border:none;cursor:pointer;font-size:13px;font-weight:500">+ Nouvelle invitation</button>
+        </div>
       </header>
 
       <div class="admin-grid">
@@ -43,6 +46,7 @@ export function renderAdminDashboard(root, { onBack, onUserChanged }) {
 
   root.querySelector('[data-act="back"]').addEventListener("click", () => onBack?.());
   root.querySelector('[data-act="new-invite"]').addEventListener("click", () => openInviteModal());
+  root.querySelector('[data-act="change-password"]').addEventListener("click", () => openChangePasswordModal());
 
   refresh();
 
@@ -278,6 +282,40 @@ export function renderAdminDashboard(root, { onBack, onUserChanged }) {
     refresh();
     onUserChanged?.();
   }
+}
+
+function openChangePasswordModal() {
+  openModal(`
+    <h2>Changer le mot de passe admin</h2>
+    <p>Le mot de passe admin Casino sera stocké dans la DB Casino (hash PBKDF2).
+       Le mot de passe Portfolio reste inchangé.</p>
+    <div class="field"><label>Ancien mot de passe</label>
+      <input class="input" type="password" id="oldPwd" autocomplete="current-password"></div>
+    <div class="field" style="margin-top:10px"><label>Nouveau mot de passe (min 6)</label>
+      <input class="input" type="password" id="newPwd" autocomplete="new-password"></div>
+    <div class="field" style="margin-top:10px"><label>Confirmer</label>
+      <input class="input" type="password" id="newPwd2" autocomplete="new-password"></div>
+    <div class="modal-row">
+      <button class="btn btn--ghost btn--full" data-close>Annuler</button>
+      <button class="btn btn--primary btn--full" id="pwdSave">Enregistrer</button>
+    </div>
+  `);
+  document.getElementById("pwdSave").addEventListener("click", async () => {
+    const old1 = document.getElementById("oldPwd").value;
+    const n1 = document.getElementById("newPwd").value;
+    const n2 = document.getElementById("newPwd2").value;
+    if (n1.length < 6) return toast("Min 6 caractères", "err");
+    if (n1 !== n2)     return toast("Les nouveaux mots de passe ne correspondent pas", "err");
+    const r = await fetch("/casino/api/auth/admin-password", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ old_password: old1, new_password: n1 }),
+    }).then(x => x.json());
+    if (!r.ok) return toast(r.error || "Erreur", "err");
+    document.getElementById("modal-root").innerHTML = "";
+    toast("Mot de passe mis à jour", "ok");
+  });
 }
 
 function inviteUrl(iid) {

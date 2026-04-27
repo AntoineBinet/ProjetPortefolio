@@ -29,20 +29,20 @@ const GAMES = [
     tags: ["cartes", "vs croupier"],
   },
   {
-    id: "soon-1",
+    id: "roulette",
     name: "Roulette",
-    tagline: "Européenne. Mises libres et tableaux de paris.",
+    tagline: "Européenne (1 zéro). Pleins, chevaux, transversales, douzaines, colonnes, simples.",
     accent: "#a8443a",
-    available: false,
-    tags: ["bientôt"],
+    available: true,
+    tags: ["roulette", "mises libres"],
   },
   {
-    id: "soon-2",
+    id: "memory",
     name: "Memory",
-    tagline: "32 cartes, paires chronométrées.",
+    tagline: "8 paires chronométrées. Multiplicateur jusqu'à ×3 selon temps & coups.",
     accent: "#2e7a48",
-    available: false,
-    tags: ["bientôt", "réflexe"],
+    available: true,
+    tags: ["paires", "chrono", "réflexe"],
   },
 ];
 

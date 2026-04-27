@@ -89,7 +89,14 @@ def _require_same_origin():
 
 
 def _set_casino_cookie(resp, token: str, ttl_days: int = 30):
-    """Cookie HttpOnly + SameSite=Lax + Secure si HTTPS, scoped /casino."""
+    """Cookie HttpOnly + SameSite=Lax (+ Secure si HTTPS), scope `/`.
+
+    Le scope `/` est nécessaire pour que le middleware d'isolation Portfolio
+    voie le cookie depuis n'importe quelle route. La sécurité repose sur :
+      - HttpOnly : non accessible par JS
+      - SameSite=Lax : pas envoyé en cross-site (anti-CSRF basique)
+      - Secure (HTTPS) : pas envoyé sur HTTP en prod
+    """
     secure = (request.is_secure or
               (request.headers.get("X-Forwarded-Proto") == "https"))
     resp.set_cookie(
@@ -98,12 +105,12 @@ def _set_casino_cookie(resp, token: str, ttl_days: int = 30):
         httponly=True,
         secure=bool(secure),
         samesite="Lax",
-        path="/casino",
+        path="/",
     )
 
 
 def _clear_casino_cookie(resp):
-    resp.set_cookie(CASINO_COOKIE, "", max_age=0, path="/casino",
+    resp.set_cookie(CASINO_COOKIE, "", max_age=0, path="/",
                     httponly=True, samesite="Lax")
 
 
@@ -173,7 +180,8 @@ def api_admin_login():
     if chk: return chk
     data = request.get_json(silent=True) or {}
     pwd = (data.get("password") or "").strip()
-    if not secrets.compare_digest(pwd.encode(), _admin_password().encode()):
+    # Vérif via DB (hash stocké) ou fallback PORTFOLIO_PASS si pas encore défini
+    if not casino_db.check_admin_password(pwd, env_fallback=_admin_password()):
         time.sleep(0.5)
         return jsonify(ok=False, error="Mot de passe incorrect"), 401
     admin_id = casino_db.ensure_admin(
@@ -187,6 +195,25 @@ def api_admin_login():
     resp = jsonify(ok=True, user=_user_payload(user))
     _set_casino_cookie(resp, token)
     return resp
+
+
+@casino_bp.post("/casino/api/auth/admin-password")
+def api_admin_change_password():
+    """Change le mot de passe admin Casino. Requiert l'admin connecté + l'ancien mdp."""
+    admin, err = _require_admin()
+    if err: return err
+    chk = _require_same_origin()
+    if chk: return chk
+    data = request.get_json(silent=True) or {}
+    old = (data.get("old_password") or "").strip()
+    new = (data.get("new_password") or "").strip()
+    if len(new) < 6:
+        return jsonify(ok=False, error="Nouveau mot de passe trop court (min 6)"), 400
+    if not casino_db.check_admin_password(old, env_fallback=_admin_password()):
+        time.sleep(0.5)
+        return jsonify(ok=False, error="Ancien mot de passe incorrect"), 401
+    casino_db.set_admin_password(new)
+    return jsonify(ok=True, message="Mot de passe mis à jour")
 
 
 @casino_bp.post("/casino/api/auth/logout")
