@@ -1007,3 +1007,1165 @@ body::after {
   .lobby-card { padding: 22px; }
   .lobby-code { font-size: 26px; letter-spacing: 0.18em; }
 }
+
+/* ============================================================
+   THEME LIGHT (style Portfolio) — appliqué via body.theme-light
+   Pour le menu Casino, login, invite, admin (les pages "shell").
+   Les jeux (Hold'em, Blackjack) restent en dark Liquid Glass.
+   ============================================================ */
+
+body.theme-light {
+  --bg: #fbfaf7;
+  --fg: #0a0a0a;
+  --fg-soft: #404040;
+  --muted: #525252;
+  --muted-2: #737373;
+  --muted-3: #a8a29e;
+  --line: rgba(0,0,0,0.08);
+  --line-soft: rgba(0,0,0,0.04);
+  --line-strong: rgba(0,0,0,0.16);
+  --card: #ffffff;
+  --paper: #fafaf9;
+  --paper-2: #f5f5f4;
+  --accent-light: #0a0a0a;
+
+  --font-display-light: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --font-body-light:    'Inter Tight', system-ui, -apple-system, sans-serif;
+  --font-mono-light:    'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body-light);
+  letter-spacing: -0.005em;
+  overflow: auto;
+}
+body.theme-light::before { display: none; }
+body.theme-light::after { display: none; }
+
+/* Menu Casino — style Portfolio "Studio Index" ──────────── */
+.theme-light .casino-page {
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; flex-direction: column;
+  background: var(--bg);
+}
+.theme-light .casino-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 38px 18px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.theme-light .casino-brand {
+  font-family: var(--font-display-light);
+  font-size: 16px; font-weight: 600;
+  letter-spacing: -0.02em;
+  display: flex; align-items: baseline; gap: 2px;
+}
+.theme-light .casino-brand-dot { color: #b89b5e; font-weight: 700; }
+.theme-light .casino-topbar-nav {
+  display: flex; gap: 28px;
+  font-size: 13px;
+  color: var(--muted-2);
+  font-weight: 500;
+}
+.theme-light .casino-topbar-nav a, .theme-light .casino-topbar-nav button {
+  color: var(--muted-2);
+  background: none; border: none; padding: 0;
+  cursor: pointer;
+  font: inherit;
+  transition: color 200ms ease;
+  letter-spacing: -0.005em;
+}
+.theme-light .casino-topbar-nav a.is-active,
+.theme-light .casino-topbar-nav a:hover,
+.theme-light .casino-topbar-nav button:hover { color: var(--fg); }
+
+/* User pill (chips, avatar) en haut à droite */
+.theme-light .casino-userpill {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 8px 6px 14px;
+  border-radius: 9999px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  font-size: 12px;
+}
+.theme-light .casino-userpill .pill-name {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.theme-light .casino-userpill .pill-chips {
+  font-family: var(--font-mono-light);
+  font-size: 11px;
+  color: #b89b5e;
+  font-weight: 600;
+}
+.theme-light .casino-userpill .pill-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  overflow: hidden; flex-shrink: 0;
+}
+
+/* Hero section — gros titre éditorial */
+.theme-light .casino-hero {
+  padding: 64px 38px 32px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+}
+.theme-light .casino-eyebrow-mono {
+  font-family: var(--font-mono-light);
+  font-size: 11px;
+  color: var(--muted-3);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.theme-light .casino-h1 {
+  font-family: var(--font-display-light);
+  font-size: clamp(48px, 7vw, 96px);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 0.98;
+  margin: 0 0 8px;
+  color: var(--fg);
+}
+.theme-light .casino-h1 em {
+  font-style: italic;
+  font-weight: 500;
+  color: var(--muted);
+}
+.theme-light .casino-sub {
+  font-size: 16px;
+  color: var(--muted);
+  max-width: 540px;
+  margin: 18px 0 0;
+  line-height: 1.55;
+}
+
+/* Liste des jeux — style "apps-list" du Portfolio */
+.theme-light .games-list {
+  list-style: none;
+  padding: 0;
+  margin: 24px 0 0;
+  border-top: 1px solid var(--line-soft);
+}
+.theme-light .games-row {
+  display: grid;
+  grid-template-columns: 60px 18px 1fr auto auto;
+  align-items: center;
+  gap: 24px;
+  padding: 28px 38px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
+  background: none; border-left: none; border-right: none; border-top: none;
+  text-align: left;
+  font: inherit; color: inherit;
+  position: relative;
+  transition: background 220ms ease;
+}
+.theme-light .games-row:hover:not([disabled]) {
+  background: var(--card);
+}
+.theme-light .games-row[disabled] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.theme-light .games-row::before {
+  content: ""; position: absolute;
+  left: 38px; right: 38px;
+  bottom: -1px;
+  height: 1px;
+  background: var(--accent-light);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.theme-light .games-row:hover:not([disabled])::before { transform: scaleX(1); }
+
+.theme-light .games-num {
+  font-family: var(--font-mono-light);
+  font-size: 12px;
+  color: var(--muted-3);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.theme-light .games-swatch {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--accent, #b89b5e);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px rgba(0,0,0,0.06);
+}
+.theme-light .games-meta { min-width: 0; }
+.theme-light .games-name {
+  font-family: var(--font-display-light);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin: 0 0 4px;
+  color: var(--fg);
+  line-height: 1.05;
+}
+.theme-light .games-tagline {
+  font-size: 13.5px;
+  color: var(--muted-2);
+  letter-spacing: -0.005em;
+  line-height: 1.45;
+  max-width: 520px;
+}
+.theme-light .games-tags {
+  display: flex; gap: 6px;
+  font-size: 11px;
+}
+.theme-light .games-tag {
+  padding: 3px 9px;
+  border-radius: 9999px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-family: var(--font-mono-light);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 500;
+}
+.theme-light .games-arrow {
+  font-size: 18px; color: var(--muted-3);
+  font-family: var(--font-display-light);
+  transition: transform 280ms cubic-bezier(0.32, 0.72, 0, 1), color 200ms ease;
+}
+.theme-light .games-row:hover:not([disabled]) .games-arrow {
+  color: var(--fg);
+  transform: translate(2px, -2px);
+}
+.theme-light .games-soon-badge {
+  font-family: var(--font-mono-light);
+  font-size: 10px; letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted-3);
+  font-weight: 600;
+}
+
+/* Footer (admin / invite quick links) */
+.theme-light .casino-foot {
+  margin-top: auto;
+  padding: 28px 38px 28px;
+  display: flex; justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--line-soft);
+  font-size: 12px;
+  color: var(--muted-2);
+  font-family: var(--font-mono-light);
+  letter-spacing: 0.04em;
+}
+.theme-light .casino-foot-actions {
+  display: flex; gap: 18px;
+}
+.theme-light .casino-foot-actions button {
+  background: none; border: none; padding: 0;
+  cursor: pointer;
+  color: var(--muted-2);
+  font-family: inherit; font-size: inherit; letter-spacing: inherit;
+  text-transform: uppercase;
+  transition: color 200ms ease;
+}
+.theme-light .casino-foot-actions button:hover { color: var(--fg); }
+
+/* Pages light : login, invite (centrées dans un card blanc) */
+.theme-light .lite-page {
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 38px;
+  background: var(--bg);
+}
+.theme-light .lite-card {
+  width: min(440px, 100%);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 36px 32px;
+  box-shadow: 0 24px 60px -24px rgba(0,0,0,0.18);
+}
+.theme-light .lite-eyebrow {
+  font-family: var(--font-mono-light);
+  font-size: 11px;
+  color: var(--muted-3);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.theme-light .lite-title {
+  font-family: var(--font-display-light);
+  font-size: 36px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  margin: 0 0 8px;
+}
+.theme-light .lite-title em { font-style: italic; color: var(--muted); font-weight: 500; }
+.theme-light .lite-sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0 0 24px;
+  line-height: 1.55;
+}
+.theme-light .lite-field { margin-bottom: 14px; }
+.theme-light .lite-field label {
+  display: block;
+  font-family: var(--font-mono-light);
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  margin-bottom: 6px;
+}
+.theme-light .lite-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  font: inherit; color: var(--fg);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+.theme-light .lite-input:focus {
+  border-color: var(--fg);
+  box-shadow: 0 0 0 4px rgba(10,10,10,0.06);
+}
+.theme-light .lite-input--code {
+  font-family: var(--font-mono-light);
+  letter-spacing: 0.40em;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 22px;
+  font-weight: 600;
+  padding: 18px;
+}
+.theme-light .lite-btn {
+  width: 100%;
+  padding: 13px 18px;
+  border-radius: 10px;
+  background: var(--fg);
+  color: var(--bg);
+  border: 1px solid var(--fg);
+  font: inherit; font-weight: 500;
+  font-size: 14px; letter-spacing: -0.005em;
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 220ms ease;
+}
+.theme-light .lite-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px -8px rgba(0,0,0,0.34);
+}
+.theme-light .lite-btn:active { transform: translateY(0); }
+.theme-light .lite-btn--ghost {
+  background: var(--card); color: var(--fg);
+  border-color: var(--line);
+}
+.theme-light .lite-btn--ghost:hover { background: var(--paper-2); }
+.theme-light .lite-btnrow {
+  display: flex; gap: 10px;
+  margin-top: 18px;
+}
+.theme-light .lite-back {
+  position: absolute;
+  top: 22px; left: 22px;
+  font-family: var(--font-mono-light);
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  background: none; border: none;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: color 200ms ease;
+}
+.theme-light .lite-back:hover { color: var(--fg); }
+
+/* Sélection avatar dans la page invite */
+.theme-light .lite-avatar-pick {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin: 14px 0 4px;
+  justify-content: center;
+}
+.theme-light .lite-avatar-opt {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 200ms ease, border-color 200ms ease;
+  background: none; padding: 0;
+}
+.theme-light .lite-avatar-opt:hover { transform: scale(1.06); }
+.theme-light .lite-avatar-opt.is-selected {
+  border-color: var(--fg);
+  box-shadow: 0 0 0 4px rgba(0,0,0,0.04);
+}
+
+/* Admin dashboard — style light Portfolio ─────────────── */
+.theme-light .admin-page {
+  min-height: 100vh; min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  display: flex; flex-direction: column;
+}
+.theme-light .admin-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 38px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.theme-light .admin-h1 {
+  font-family: var(--font-display-light);
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  margin: 0;
+}
+.theme-light .admin-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 38px;
+  padding: 28px 38px 38px;
+  max-width: 1280px;
+  width: 100%;
+  margin: 0 auto;
+}
+.theme-light .admin-section {
+  background: none; border: none; padding: 0;
+}
+.theme-light .admin-section-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.theme-light .admin-section h2 {
+  font-family: var(--font-display-light);
+  font-size: 18px; font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--fg);
+}
+.theme-light .admin-count {
+  font-family: var(--font-mono-light);
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  color: var(--muted-2);
+  text-transform: uppercase;
+}
+.theme-light .admin-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 0;
+  background: none; border: none;
+  border-bottom: 1px solid var(--line-soft);
+  border-radius: 0;
+}
+.theme-light .admin-row-avatar { width: 32px; height: 32px; }
+.theme-light .admin-row-name {
+  font-weight: 600; font-size: 15px; color: var(--fg);
+  letter-spacing: -0.01em;
+  display: flex; gap: 8px; align-items: center;
+}
+.theme-light .admin-row-sub {
+  font-family: var(--font-mono-light);
+  font-size: 11px; color: var(--muted-3);
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+.theme-light .admin-row-note {
+  font-size: 12px; color: var(--muted);
+  font-style: italic;
+  margin-top: 4px;
+}
+.theme-light .chips-amount {
+  font-family: var(--font-mono-light);
+  font-size: 15px; font-weight: 600;
+  color: #b89b5e;
+}
+.theme-light .chips-label {
+  font-family: var(--font-mono-light);
+  font-size: 10px; color: var(--muted-3);
+  letter-spacing: 0.10em;
+}
+.theme-light .ch-pill {
+  font-family: var(--font-mono-light);
+  font-size: 9px;
+  padding: 2px 7px;
+  background: var(--paper-2); color: var(--muted);
+  border-radius: 9999px;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  font-weight: 600;
+}
+.theme-light .ch-pill--admin {
+  background: rgba(184,155,94,0.14);
+  color: #8c733e;
+}
+.theme-light .ch-pill--ready {
+  background: rgba(34, 138, 78, 0.10);
+  color: #2e7a48;
+}
+.theme-light .admin-row-actions { display: flex; gap: 4px; }
+.theme-light .admin-row-actions button,
+.theme-light .admin-section-head button {
+  font: inherit;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-size: 12px; font-weight: 500;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+.theme-light .admin-row-actions button:hover,
+.theme-light .admin-section-head button:hover {
+  background: var(--paper-2);
+  border-color: var(--line-strong);
+}
+.theme-light .admin-invite {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+}
+.theme-light .admin-invite.is-active { border-color: rgba(46,122,72,0.32); }
+.theme-light .admin-invite.is-used,
+.theme-light .admin-invite.is-expired { opacity: 0.55; }
+.theme-light .admin-invite-link {
+  background: var(--paper-2);
+  border-color: var(--line);
+  color: var(--muted);
+}
+.theme-light .admin-invite-link code { color: var(--muted); }
+.theme-light .admin-invite-code strong {
+  color: #b89b5e;
+}
+.theme-light .invite-code-big {
+  background: rgba(184,155,94,0.10);
+  border-color: rgba(184,155,94,0.32);
+  color: #8c733e;
+}
+.theme-light .lobby-link {
+  background: var(--paper-2);
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+/* Modals dans le thème light */
+.theme-light .modal-backdrop {
+  background: rgba(20,20,20,0.34);
+  backdrop-filter: blur(6px);
+}
+.theme-light .modal {
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  border-radius: 18px;
+  box-shadow: 0 28px 80px -32px rgba(0,0,0,0.34);
+}
+.theme-light .modal::before { display: none; }
+.theme-light .modal h2 {
+  font-family: var(--font-display-light);
+  font-weight: 600; color: var(--fg);
+  letter-spacing: -0.025em;
+}
+.theme-light .modal p { color: var(--muted); }
+.theme-light .modal-close {
+  background: var(--paper-2);
+  color: var(--muted);
+}
+.theme-light .modal .input {
+  background: var(--card);
+  color: var(--fg);
+  border-color: var(--line);
+}
+.theme-light .modal .input:focus {
+  border-color: var(--fg);
+  box-shadow: 0 0 0 4px rgba(10,10,10,0.06);
+  background: var(--card);
+}
+.theme-light .modal .field label {
+  font-family: var(--font-mono-light);
+  font-size: 11px; color: var(--muted-2);
+  letter-spacing: 0.10em;
+}
+.theme-light .modal .btn {
+  font-family: var(--font-body-light);
+  font-weight: 500;
+  background: var(--card); color: var(--fg);
+  border-color: var(--line);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+.theme-light .modal .btn:hover { background: var(--paper-2); border-color: var(--line-strong); }
+.theme-light .modal .btn--primary {
+  background: var(--fg); color: var(--bg); border-color: var(--fg);
+}
+.theme-light .modal .btn--primary:hover { background: #1a1a1a; }
+.theme-light .modal .btn--ghost {
+  background: var(--card); color: var(--muted);
+}
+.theme-light .modal .toggle {
+  background: rgba(0,0,0,0.10);
+  border-color: var(--line);
+}
+.theme-light .modal .toggle.is-on {
+  background: #2e7a48;
+}
+
+.theme-light .toasts .toast {
+  background: var(--fg);
+  color: var(--bg);
+  border: 1px solid var(--fg);
+}
+
+/* Settings page en theme light */
+.theme-light .settings-page { background: var(--bg); }
+.theme-light .settings-page .topbar {
+  border-bottom: 1px solid var(--line-soft);
+}
+.theme-light .settings-page .topbar-brand,
+.theme-light .settings-page .btn--ghost {
+  color: var(--muted);
+}
+.theme-light .settings-group {
+  background: var(--card);
+  border: 1px solid var(--line);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+}
+.theme-light .settings-group::before { display: none; }
+.theme-light .settings-group-title {
+  color: var(--muted-2);
+  font-family: var(--font-mono-light);
+  font-weight: 600;
+}
+.theme-light .set-row { border-bottom-color: var(--line-soft); }
+.theme-light .set-label { color: var(--fg); }
+.theme-light .set-num {
+  background: var(--card); color: var(--fg);
+  border-color: var(--line);
+}
+.theme-light .toggle-row { border-bottom-color: var(--line-soft); }
+.theme-light .set-range-val { color: #b89b5e; }
+.theme-light .toggle {
+  background: rgba(0,0,0,0.12);
+  border-color: var(--line);
+}
+.theme-light .toggle.is-on { background: #2e7a48; }
+
+/* ============================================================
+   Anciens styles (DARK) — gardés pour les vues de jeu
+   Le menu Casino n'utilise plus ces styles ; les jeux Hold'em
+   et Blackjack continuent à les utiliser.
+   ============================================================ */
+.casino-home {
+  position: relative; width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  overflow: auto;
+}
+.casino-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 22px;
+  margin: var(--safe-top) 22px 0;
+  border-radius: var(--r-lg);
+  gap: 14px;
+}
+.ch-left { display: flex; align-items: center; gap: 14px; }
+.ch-avatar { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+.ch-eyebrow { font-size: 11px; color: var(--ink-mute); letter-spacing: 0.04em; }
+.ch-name {
+  font-size: 17px; font-weight: 700; letter-spacing: -0.02em;
+  display: flex; align-items: center; gap: 8px;
+}
+.ch-pill {
+  font-size: 10px; padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: rgba(255,255,255,0.08);
+  letter-spacing: 0.10em; text-transform: uppercase;
+  font-weight: 700;
+}
+.ch-pill--admin { background: var(--gold-faint); color: var(--gold); }
+.ch-pill--ready { background: rgba(116,197,148,0.18); color: var(--st-call); }
+.ch-right { display: flex; align-items: center; gap: 10px; }
+.ch-chips {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--r-pill);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-edge);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.casino-body {
+  flex: 1;
+  padding: 32px 24px var(--safe-bottom);
+  display: flex; flex-direction: column; align-items: center;
+  gap: 28px;
+}
+.casino-hero { text-align: center; max-width: 560px; }
+.casino-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 13px;
+  border-radius: var(--r-pill);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-edge);
+  font-size: 11px; color: var(--ink-soft);
+  letter-spacing: 0.16em; text-transform: uppercase;
+  font-weight: 600;
+}
+.casino-eyebrow svg { color: var(--gold); }
+.casino-title {
+  font-family: var(--font-display);
+  font-size: 38px; font-weight: 700;
+  letter-spacing: -0.04em;
+  margin: 12px 0 8px;
+}
+.casino-tagline {
+  color: var(--ink-soft);
+  font-size: 14.5px;
+  max-width: 460px;
+  margin: 0 auto;
+  line-height: 1.55;
+}
+.casino-tagline strong { color: var(--gold); font-weight: 600; }
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+  width: 100%;
+  max-width: 920px;
+}
+.game-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--r-lg);
+  transition: transform 0.36s var(--ease-spring),
+              border-color 0.32s var(--ease-soft);
+  position: relative;
+  overflow: hidden;
+}
+.game-card::after {
+  content: ""; position: absolute;
+  top: 0; left: 0; width: 3px; height: 100%;
+  background: var(--accent, var(--gold));
+  opacity: 0.6;
+}
+.game-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent, var(--glass-edge-2));
+}
+.game-card.is-soon { cursor: not-allowed; opacity: 0.5; }
+.game-card.is-soon:hover { transform: none; }
+.game-icon {
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--r-md);
+  flex-shrink: 0;
+  background: rgba(255,255,255,0.04);
+}
+.game-icon svg { color: var(--accent, var(--gold)); }
+.game-meta { min-width: 0; }
+.game-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  margin-bottom: 2px;
+}
+.game-tagline {
+  font-size: 12.5px;
+  color: var(--ink-mute);
+  line-height: 1.4;
+}
+.game-arrow { color: var(--ink-faint); }
+.game-card:hover .game-arrow { color: var(--accent, var(--gold)); }
+.game-soon {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  color: var(--ink-faint);
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  background: rgba(255,255,255,0.04);
+}
+.casino-footer {
+  display: flex; gap: 10px; flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+/* Admin dashboard */
+.admin-page {
+  position: relative; width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  overflow: auto;
+}
+.admin-page .topbar { padding: var(--safe-top) 22px 8px; }
+.admin-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 12px 22px var(--safe-bottom);
+}
+.admin-section { padding: 18px 18px 10px; border-radius: var(--r-lg); min-height: 340px; }
+.admin-section-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.admin-section h2 {
+  font-family: var(--font-display);
+  font-size: 18px; font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+.admin-count {
+  font-size: 11px; color: var(--ink-mute);
+  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+}
+.admin-list { display: flex; flex-direction: column; gap: 6px; }
+.admin-loading, .admin-empty {
+  color: var(--ink-mute); font-size: 13px;
+  padding: 14px; text-align: center;
+}
+.admin-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.admin-row-avatar { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; }
+.admin-row-meta { min-width: 0; }
+.admin-row-name {
+  font-weight: 600; font-size: 14px;
+  letter-spacing: -0.01em;
+  display: flex; align-items: center; gap: 8px;
+}
+.admin-row-sub {
+  font-size: 11px; color: var(--ink-mute);
+  font-family: var(--font-mono);
+  margin-top: 1px;
+}
+.admin-row-note {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 4px;
+  font-style: italic;
+}
+.admin-row-chips {
+  text-align: right;
+  display: flex; flex-direction: column;
+}
+.chips-amount {
+  font-family: var(--font-mono);
+  font-weight: 700; font-size: 15px;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+.chips-label { font-size: 10px; color: var(--ink-mute); letter-spacing: 0.06em; text-transform: uppercase; }
+.admin-row-actions { display: flex; gap: 4px; }
+
+.admin-invite {
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.admin-invite.is-active { border-color: rgba(116,197,148,0.22); }
+.admin-invite.is-used   { opacity: 0.5; }
+.admin-invite.is-expired { opacity: 0.4; }
+.admin-invite-meta { flex: 1; min-width: 0; }
+.admin-invite-status {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11.5px; color: var(--ink-soft);
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.admin-invite-chips {
+  font-family: var(--font-mono);
+  color: var(--gold);
+  font-weight: 600;
+}
+.admin-invite-note { color: var(--ink); font-style: italic; }
+.admin-invite-link {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px 6px 12px;
+  border-radius: var(--r-sm);
+  background: rgba(0,0,0,0.32);
+  border: 1px solid rgba(255,255,255,0.05);
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  word-break: break-all;
+}
+.admin-invite-link code { color: var(--ink-soft); flex: 1; min-width: 0; }
+.admin-invite-code {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--ink-soft);
+}
+.admin-invite-code strong {
+  font-family: var(--font-mono);
+  letter-spacing: 0.30em;
+  font-size: 16px;
+  color: var(--gold);
+  font-weight: 700;
+  margin-left: 4px;
+}
+.invite-code-big {
+  font-family: var(--font-mono);
+  font-size: 28px; font-weight: 700;
+  letter-spacing: 0.28em;
+  text-align: center;
+  padding: 14px;
+  border-radius: var(--r-md);
+  background: rgba(214,183,112,0.10);
+  border: 1px solid rgba(214,183,112,0.32);
+  color: var(--gold);
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+}
+.invite-code-big button {
+  font-size: 12px; letter-spacing: 0.06em;
+}
+
+/* Settings page */
+.settings-page {
+  display: flex; flex-direction: column;
+  width: 100%; height: 100%;
+  overflow: auto;
+}
+.settings-body {
+  padding: 14px 22px var(--safe-bottom);
+  display: flex; flex-direction: column;
+  gap: 14px;
+  max-width: 760px;
+  margin: 0 auto;
+  width: 100%;
+}
+.settings-group { padding: 18px 20px 6px; border-radius: var(--r-lg); }
+.settings-group-title {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+.settings-rows { display: flex; flex-direction: column; }
+.set-row {
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 14px; align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.set-row:last-child { border-bottom: none; }
+.set-label { font-size: 14px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
+.set-range-val { font-family: var(--font-mono); color: var(--gold); font-size: 12px; font-weight: 700; }
+.set-num {
+  width: 110px;
+  padding: 8px 12px;
+  text-align: right;
+  font-family: var(--font-mono);
+}
+.set-row input[type=range] {
+  width: 200px;
+  -webkit-appearance: none; appearance: none;
+  height: 3px;
+  background: rgba(255,255,255,0.10);
+  border-radius: var(--r-pill);
+  outline: none;
+  cursor: pointer;
+}
+.set-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: white; border: 1.5px solid var(--gold);
+  cursor: pointer;
+}
+.settings-footer {
+  display: flex; gap: 10px; justify-content: flex-end;
+  padding: 14px 0 28px;
+}
+
+/* Invite redemption */
+.invite-avatar-pick {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin: 18px 0 4px;
+  justify-content: center;
+}
+.avatar-opt {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.24s var(--ease-spring), border-color 0.24s;
+  background: none;
+  padding: 0;
+}
+.avatar-opt:hover { transform: scale(1.06); }
+.avatar-opt.is-selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 4px var(--gold-faint);
+}
+
+/* Blackjack */
+.bj-game { display: grid; grid-template-rows: auto 1fr auto; }
+.bj-felt {
+  position: relative;
+  display: flex; flex-direction: column;
+  justify-content: space-between;
+  padding: 18px 24px;
+  gap: 14px;
+}
+.bj-row {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 8px;
+}
+.bj-row-label {
+  font-size: 11px; letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  font-weight: 600;
+}
+.bj-cards, .bj-hand-cards {
+  display: flex; gap: 6px; justify-content: center;
+  min-height: 86px;
+}
+.bj-cards svg, .bj-hand-cards svg {
+  width: 64px; height: auto;
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.55));
+}
+.bj-card-wrap { position: relative; }
+.bj-total {
+  font-family: var(--font-mono);
+  font-weight: 700; font-size: 14px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  background: rgba(0,0,0,0.46);
+  padding: 3px 12px;
+  border-radius: var(--r-pill);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.bj-mid { display: flex; justify-content: center; }
+.bj-bet { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.bj-hands { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; }
+.bj-hand {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 8px;
+  border-radius: var(--r-md);
+  border: 1px solid transparent;
+}
+.bj-hand.is-active {
+  border-color: var(--ind-active);
+  box-shadow: 0 0 0 4px rgba(241,204,102,0.12);
+}
+.bj-hand.is-bust { opacity: 0.62; filter: grayscale(0.35); }
+.bj-hand-total {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+.bj-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 8px;
+  font-size: 10px;
+  border-radius: var(--r-pill);
+  background: var(--gold-faint);
+  color: var(--gold);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.bj-bet-card {
+  width: min(420px, 100%);
+  margin: 0 auto;
+  padding: 18px 22px;
+  border-radius: var(--r-lg);
+  text-align: center;
+}
+.bj-bet-card h3 {
+  font-family: var(--font-display);
+  font-size: 16px; font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+}
+.bj-bet-presets {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  margin-bottom: 10px;
+}
+.bj-bet-presets button {
+  padding: 9px 0;
+  border-radius: var(--r-sm);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-edge);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  transition: background 0.2s, transform 0.2s;
+}
+.bj-bet-presets button:hover:not([disabled]) { background: rgba(255,255,255,0.08); transform: translateY(-1px); }
+.bj-bet-presets button:active { transform: scale(0.96); }
+.bj-bet-presets button[disabled] { opacity: 0.32; cursor: not-allowed; }
+.bj-bet-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.bj-meta { font-size: 11px; color: var(--ink-mute); margin: 6px 0 0; }
+.bj-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  flex: 1;
+}
+.bj-hud { padding: 12px 22px var(--safe-bottom); }
+.bj-result {
+  text-align: center;
+  padding: 14px 22px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-md);
+}
+.bj-result-text { font-size: 14px; letter-spacing: -0.01em; margin-bottom: 12px; }
+.bj-result-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+html.reduced-motion *,
+html.reduced-motion *::before,
+html.reduced-motion *::after {
+  animation-duration: 0.001s !important;
+  transition-duration: 0.001s !important;
+}
+html.high-contrast .glass {
+  background: rgba(15,16,20,0.92);
+  border-color: rgba(255,255,255,0.4);
+}
+
+@media (max-width: 880px) {
+  .admin-grid { grid-template-columns: 1fr; }
+  .admin-row { grid-template-columns: auto 1fr auto; }
+  .admin-row-actions { grid-column: 1 / -1; justify-content: flex-end; }
+  .casino-title { font-size: 28px; }
+}
