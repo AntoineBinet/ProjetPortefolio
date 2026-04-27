@@ -153,7 +153,12 @@ def index():
 
 @casino_bp.route("/casino/static/<path:filename>")
 def static_file(filename: str):
-    return send_from_directory(str(CASINO_DIR / "static"), filename, max_age=0)
+    """Sert les assets du SPA Casino. `Cache-Control: no-store` pour que
+    les iterations de design ne soient jamais bloquées par un cache stale."""
+    resp = send_from_directory(str(CASINO_DIR / "static"), filename, max_age=0)
+    resp.headers["Cache-Control"] = "no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    return resp
 
 
 # ── Auth ─────────────────────────────────────────────────────────

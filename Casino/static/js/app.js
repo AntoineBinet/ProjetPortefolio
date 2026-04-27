@@ -63,7 +63,7 @@ function defaultSettings() {
     showOdds: false,
     actionTimeout: 15,
     cardStyle: "2color",           // 2color | 4color
-    cardBack: "blue",              // blue | red | black
+    cardBack: "casino",            // casino | blue | red | black
     tableColor: "green",           // green | blue | burgundy
     showStrengthBar: true,
     chipAnimations: true,
@@ -366,7 +366,7 @@ function renderSettings(root) {
           { type: "select", key: "cardStyle", label: "Style des cartes",
             options: [["2color","Deux couleurs"],["4color","Quatre couleurs"]] },
           { type: "select", key: "cardBack", label: "Dos de carte",
-            options: [["blue","Bleu profond"],["red","Bordeaux"],["black","Onyx"]] },
+            options: [["casino","Casino (anthracite or)"],["blue","Bleu profond"],["red","Bordeaux"],["black","Onyx"]] },
           { type: "select", key: "tableColor", label: "Feutre de table",
             options: [["green","Vert classique"],["blue","Bleu nuit"],["burgundy","Bordeaux"]] },
           { type: "range",  key: "cardSize", label: "Taille des cartes (%)", min: 80, max: 130 },

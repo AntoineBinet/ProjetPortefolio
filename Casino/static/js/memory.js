@@ -276,11 +276,37 @@ export function startMemory(root, { user, settings, onChipChange, onExit }) {
 }
 
 function cardBack() {
+  // Dos casino premium : anthracite profond + liseré or, pattern damassé subtil
+  // (cohérent avec la palette Liquid Glass des autres jeux)
+  let pattern = "";
+  for (let i = 0; i < 16; i++) {
+    for (let j = 0; j < 11; j++) {
+      const x = 14 + j * 21;
+      const y = 14 + i * 20;
+      pattern += `<polygon points="${x},${y - 4} ${x + 6},${y} ${x},${y + 4} ${x - 6},${y}" fill="#3a352a" opacity="0.55"/>`;
+    }
+  }
   return `<svg viewBox="0 0 240 336" xmlns="http://www.w3.org/2000/svg">
-    <rect width="240" height="336" rx="16" fill="#0F2E5C"/>
-    <rect x="6" y="6" width="228" height="324" rx="10" fill="none" stroke="#1B4A8A" stroke-width="2"/>
-    <ellipse cx="120" cy="168" rx="58" ry="80" fill="#082146" stroke="#1B4A8A" stroke-width="2"/>
-    <text x="120" y="186" font-size="64" font-weight="800" fill="#e6c757" text-anchor="middle"
-          font-family="-apple-system,system-ui,sans-serif">♠</text>
+    <defs>
+      <linearGradient id="mc-bg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0"   stop-color="#1a1b1f"/>
+        <stop offset="0.5" stop-color="#13141a"/>
+        <stop offset="1"   stop-color="#0c0d11"/>
+      </linearGradient>
+      <radialGradient id="mc-medallion" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stop-color="#272018"/>
+        <stop offset="1" stop-color="#15110a"/>
+      </radialGradient>
+    </defs>
+    <rect width="240" height="336" rx="16" fill="url(#mc-bg)"/>
+    <rect x="4" y="4" width="232" height="328" rx="13" fill="none" stroke="#d6b770" stroke-width="0.8" opacity="0.42"/>
+    <rect x="9" y="9" width="222" height="318" rx="9"  fill="none" stroke="#d6b770" stroke-width="0.4" opacity="0.18" stroke-dasharray="2 4"/>
+    <g>${pattern}</g>
+    <ellipse cx="120" cy="168" rx="58" ry="80" fill="url(#mc-medallion)"
+             stroke="#d6b770" stroke-width="1" opacity="0.92"/>
+    <ellipse cx="120" cy="168" rx="48" ry="68" fill="none"
+             stroke="#d6b770" stroke-width="0.5" opacity="0.36" stroke-dasharray="1.5 3"/>
+    <text x="120" y="190" font-size="64" font-weight="800" fill="#d6b770" text-anchor="middle"
+          font-family="-apple-system,system-ui,sans-serif" opacity="0.92">♠</text>
   </svg>`;
 }

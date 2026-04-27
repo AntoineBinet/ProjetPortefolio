@@ -127,7 +127,7 @@ function figure(rank, suit) {
 export function renderCard(rank, suit, faceUp = true, opts = {}) {
   const w = 240, h = 336;
   if (!faceUp) {
-    return renderCardBack(opts.back || "blue", w, h);
+    return renderCardBack(opts.back || "casino", w, h);
   }
   const fill = SUIT_COLOR[suit];
   let inner = "";
@@ -155,30 +155,51 @@ export function renderCard(rank, suit, faceUp = true, opts = {}) {
 
 /**
  * Dos de carte — pattern damassé + médaillon central.
+ *
+ * Palettes :
+ *   - casino (DÉFAUT) : anthracite + or, premium discret
+ *   - blue, red, black : alternatives accessibles via settings.cardBack
  */
-function renderCardBack(palette = "blue", w = 240, h = 336) {
+function renderCardBack(palette = "casino", w = 240, h = 336) {
   const palettes = {
-    blue:  { bg: "#0F2E5C", line: "#1B4A8A", med: "#082146" },
-    red:   { bg: "#7A1F2B", line: "#A53341", med: "#5A1722" },
-    black: { bg: "#1A1A1F", line: "#3A3A48", med: "#0E0E12" },
+    casino: { bg: "#15161a", bg2: "#0c0d11", line: "#3a352a",
+              gold: "#d6b770", med: "#1a1612", medFrom: "#272018", medTo: "#15110a" },
+    blue:   { bg: "#0F2E5C", bg2: "#0F2E5C", line: "#1B4A8A",
+              gold: "#e6c757", med: "#082146", medFrom: "#082146", medTo: "#082146" },
+    red:    { bg: "#7A1F2B", bg2: "#7A1F2B", line: "#A53341",
+              gold: "#e6c757", med: "#5A1722", medFrom: "#5A1722", medTo: "#5A1722" },
+    black:  { bg: "#1A1A1F", bg2: "#0e0e12", line: "#3A3A48",
+              gold: "#e6c757", med: "#0E0E12", medFrom: "#0E0E12", medTo: "#0E0E12" },
   };
-  const p = palettes[palette] || palettes.blue;
+  const p = palettes[palette] || palettes.casino;
+  const id = `cb${Math.floor(Math.random() * 1e6)}`;
   let pattern = "";
-  for (let i = 0; i < 18; i++) {
-    for (let j = 0; j < 12; j++) {
-      const x = 12 + j * 22;
-      const y = 12 + i * 19;
-      pattern += `<polygon points="${x},${y - 5} ${x + 7},${y} ${x},${y + 5} ${x - 7},${y}" fill="${p.line}" opacity="0.5"/>`;
+  for (let i = 0; i < 16; i++) {
+    for (let j = 0; j < 11; j++) {
+      const x = 14 + j * 21;
+      const y = 14 + i * 20;
+      pattern += `<polygon points="${x},${y - 4} ${x + 6},${y} ${x},${y + 4} ${x - 6},${y}" fill="${p.line}" opacity="0.55"/>`;
     }
   }
   return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" class="card card-back">
-    <rect width="${w}" height="${h}" rx="16" fill="${p.bg}"/>
-    <rect x="6" y="6" width="${w - 12}" height="${h - 12}" rx="10" fill="none" stroke="${p.line}" stroke-width="2"/>
-    <g transform="translate(0 0)">${pattern}</g>
-    <ellipse cx="120" cy="168" rx="58" ry="80" fill="${p.med}" stroke="${p.line}" stroke-width="2"/>
-    <ellipse cx="120" cy="168" rx="48" ry="68" fill="none" stroke="${p.line}" stroke-width="1" stroke-dasharray="2 3"/>
-    <text x="120" y="186" font-size="64" font-weight="800" fill="#e6c757" text-anchor="middle"
-          font-family="-apple-system,system-ui,sans-serif">♠</text>
+    <defs>
+      <linearGradient id="${id}-bg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${p.bg}"/>
+        <stop offset="1" stop-color="${p.bg2}"/>
+      </linearGradient>
+      <radialGradient id="${id}-med" cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0" stop-color="${p.medFrom}"/>
+        <stop offset="1" stop-color="${p.medTo}"/>
+      </radialGradient>
+    </defs>
+    <rect width="${w}" height="${h}" rx="16" fill="url(#${id}-bg)"/>
+    <rect x="4" y="4" width="${w - 8}" height="${h - 8}" rx="13" fill="none" stroke="${p.gold}" stroke-width="0.8" opacity="0.42"/>
+    <rect x="9" y="9" width="${w - 18}" height="${h - 18}" rx="9" fill="none" stroke="${p.gold}" stroke-width="0.4" opacity="0.18" stroke-dasharray="2 4"/>
+    <g>${pattern}</g>
+    <ellipse cx="120" cy="168" rx="58" ry="80" fill="url(#${id}-med)" stroke="${p.gold}" stroke-width="1" opacity="0.92"/>
+    <ellipse cx="120" cy="168" rx="48" ry="68" fill="none" stroke="${p.gold}" stroke-width="0.5" opacity="0.36" stroke-dasharray="1.5 3"/>
+    <text x="120" y="190" font-size="64" font-weight="800" fill="${p.gold}" text-anchor="middle"
+          font-family="-apple-system,system-ui,sans-serif" opacity="0.92">♠</text>
   </svg>`;
 }
 
