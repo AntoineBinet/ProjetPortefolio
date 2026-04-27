@@ -1,8 +1,8 @@
-"""Portfolio (marienour.work) — Flask app minimale.
+"""Portfolio (marienour.work) — Flask app.
 
-Squelette identique en esprit à Prosp'Up : login admin, page paramètres,
-système de mise à jour Git via SSE, rollback, restart. Tout en un seul
-fichier pour rester simple à faire évoluer ensuite avec Claude Code.
+Site public (landing scroll-snap + page apps avec dock bulles Apple Watch),
+plus une zone /admin/* protégée par login pour la maintenance et le système
+de mise à jour Git via SSE (boutons MAJ / Rollback / Restart).
 """
 from __future__ import annotations
 
@@ -29,14 +29,49 @@ from flask import (
     url_for,
 )
 
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.2.0"
 APP_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORTFOLIO_PORT", "8001"))
 ADMIN_USER = os.environ.get("PORTFOLIO_USER", "admin")
 ADMIN_PASS = os.environ.get("PORTFOLIO_PASS", "admin")
 
+STUDIO_NAME = os.environ.get("PORTFOLIO_NAME", "Antoine Binet")
+STUDIO_TAGLINE = os.environ.get(
+    "PORTFOLIO_TAGLINE",
+    "Designer & developer indépendant. Une collection d'idées d'apps et de sites en cours.",
+)
+CONTACT_EMAIL = os.environ.get("PORTFOLIO_EMAIL", "hello@marienour.work")
+
+# 12 projets placeholders — éditables ici. `accent` accepte des valeurs CSS
+# modernes (oklch, hsl, hex…). `type` = "mobile" ou "web".
+PROJECTS = [
+    {"id": 1,  "slug": "lumen",       "name": "Lumen",       "tagline": "Journaling app that thinks with you",      "tags": ["mobile", "ai", "wellness"],  "year": 2026, "accent": "oklch(0.72 0.14 75)",  "type": "mobile", "demo": "#"},
+    {"id": 2,  "slug": "atlas",       "name": "Atlas",       "tagline": "A new way to read the news",               "tags": ["web", "editorial"],          "year": 2026, "accent": "oklch(0.68 0.13 240)", "type": "web",    "demo": "#"},
+    {"id": 3,  "slug": "cobalt",      "name": "Cobalt",      "tagline": "Design system for indie founders",         "tags": ["web", "tools", "design"],    "year": 2025, "accent": "oklch(0.55 0.16 260)", "type": "web",    "demo": "#"},
+    {"id": 4,  "slug": "foyer",       "name": "Foyer",       "tagline": "Shared rituals for distant friends",       "tags": ["mobile", "social"],          "year": 2025, "accent": "oklch(0.72 0.14 30)",  "type": "mobile", "demo": "#"},
+    {"id": 5,  "slug": "petra",       "name": "Petra",       "tagline": "Notebook for field researchers",           "tags": ["mobile", "tools"],           "year": 2025, "accent": "oklch(0.65 0.10 140)", "type": "mobile", "demo": "#"},
+    {"id": 6,  "slug": "quill",       "name": "Quill",       "tagline": "AI co-writer for long-form prose",         "tags": ["web", "ai", "writing"],      "year": 2024, "accent": "oklch(0.62 0.14 320)", "type": "web",    "demo": "#"},
+    {"id": 7,  "slug": "mosaic",      "name": "Mosaic",      "tagline": "Visual board for creative teams",          "tags": ["web", "tools", "design"],    "year": 2024, "accent": "oklch(0.68 0.12 180)", "type": "web",    "demo": "#"},
+    {"id": 8,  "slug": "solstice",    "name": "Solstice",    "tagline": "Seasonal habit tracker",                   "tags": ["mobile", "wellness"],        "year": 2024, "accent": "oklch(0.70 0.13 60)",  "type": "mobile", "demo": "#"},
+    {"id": 9,  "slug": "ferry",       "name": "Ferry",       "tagline": "Slow travel planner",                      "tags": ["web", "travel"],             "year": 2024, "accent": "oklch(0.62 0.12 220)", "type": "web",    "demo": "#"},
+    {"id": 10, "slug": "ember",       "name": "Ember",       "tagline": "Voice memos that become essays",           "tags": ["mobile", "ai", "writing"],   "year": 2024, "accent": "oklch(0.65 0.16 40)",  "type": "mobile", "demo": "#"},
+    {"id": 11, "slug": "tidepool",    "name": "Tidepool",    "tagline": "Personal finance, without the dashboard",  "tags": ["mobile", "finance"],         "year": 2023, "accent": "oklch(0.65 0.11 200)", "type": "mobile", "demo": "#"},
+    {"id": 12, "slug": "marginalia",  "name": "Marginalia",  "tagline": "Annotate the web with friends",            "tags": ["web", "social", "tools"],    "year": 2023, "accent": "oklch(0.60 0.14 350)", "type": "web",    "demo": "#"},
+]
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("PORTFOLIO_SECRET") or secrets.token_hex(32)
+
+
+@app.context_processor
+def _inject_globals():
+    return {
+        "studio_name": STUDIO_NAME,
+        "studio_tagline": STUDIO_TAGLINE,
+        "contact_email": CONTACT_EMAIL,
+        "current_year": datetime.datetime.now().year,
+        "app_version": APP_VERSION,
+    }
 
 
 # ── Auth helpers ──────────────────────────────────────────────────
@@ -65,13 +100,16 @@ def _require_same_origin():
     return None
 
 
-# ── Pages ─────────────────────────────────────────────────────────
+# ── Pages publiques ───────────────────────────────────────────────
 
 @app.route("/")
 def index():
-    if not _logged_in():
-        return redirect(url_for("login"))
-    return redirect(url_for("parametres"))
+    return render_template("landing.html", projects=PROJECTS)
+
+
+@app.route("/apps")
+def apps_page():
+    return render_template("apps.html", projects=PROJECTS)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -82,26 +120,33 @@ def login():
         p = (request.form.get("password") or "").strip()
         if u == ADMIN_USER and p == ADMIN_PASS:
             session["user"] = u
-            return redirect(request.args.get("next") or url_for("parametres"))
+            return redirect(request.args.get("next") or url_for("admin_parametres"))
         error = "Identifiants invalides"
-    return render_template("login.html", error=error, app_version=APP_VERSION)
+    return render_template("login.html", error=error)
 
 
 @app.route("/logout")
 def logout():
     session.clear()
-    return redirect(url_for("login"))
+    return redirect(url_for("index"))
 
 
-@app.route("/parametres")
+# ── Admin ─────────────────────────────────────────────────────────
+
+@app.route("/admin/parametres")
 @login_required
-def parametres():
+def admin_parametres():
     return render_template(
-        "parametres.html",
-        app_version=APP_VERSION,
+        "admin/parametres.html",
         app_dir=str(APP_DIR),
         user=session.get("user"),
     )
+
+
+# Compatibilité historique : ancien lien /parametres.
+@app.route("/parametres")
+def parametres_legacy():
+    return redirect(url_for("admin_parametres"), code=301)
 
 
 # ── Restart ───────────────────────────────────────────────────────
@@ -334,13 +379,11 @@ def api_deploy_remote_get():
 app.register_blueprint(deploy_bp)
 
 
-# ── 404 réparation ────────────────────────────────────────────────
+# ── 404 (mécanisme de réparation) ─────────────────────────────────
 
 @app.errorhandler(404)
 def not_found(_e):
-    return render_template("parametres.html",
-                           app_version=APP_VERSION, app_dir=str(APP_DIR),
-                           user=session.get("user"), not_found=True), 404
+    return render_template("404.html"), 404
 
 
 # ── Main ──────────────────────────────────────────────────────────

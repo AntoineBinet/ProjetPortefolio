@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ studio_name }} — Apps{% endblock %}
+{% block body_class %}page-apps{% endblock %}
+
+{% block body %}
+<header class="topbar">
+  <a href="{{ url_for('index') }}" class="brand">{{ studio_name }}<span class="dot">.</span></a>
+  <nav class="topbar-nav">
+    <a href="{{ url_for('index') }}">Index</a>
+    <a href="{{ url_for('apps_page') }}" class="is-active">Apps</a>
+    <a href="{{ url_for('index') }}#about">À propos</a>
+    <a href="{{ url_for('index') }}#about">Contact</a>
+  </nav>
+</header>
+
+<main class="apps-main">
+  <div class="apps-eyebrow">Apps · Index visuel · {{ projects|length }} projets</div>
+  <h1 class="apps-title">Toutes les apps,<br><em>en un coup d'œil.</em></h1>
+  <p class="apps-help">
+    Survole les bulles pour découvrir chaque projet. Clique pour ouvrir.
+  </p>
+
+  <div class="dock-stage" id="dockStage">
+    <div class="dock" id="dock" data-base-size="88" data-gap="14">
+      {% for p in projects %}
+      <a class="bubble" href="{{ url_for('index') }}#project-{{ p.id }}"
+         style="--accent: {{ p.accent }};"
+         data-id="{{ p.id }}"
+         data-name="{{ p.name }}"
+         data-tagline="{{ p.tagline }}"
+         data-tags="{{ p.tags|join(', ') }}"
+         data-year="{{ p.year }}"
+         aria-label="{{ p.name }} — {{ p.tagline }}">
+        <span class="bubble-gloss" aria-hidden="true"></span>
+      </a>
+      {% endfor %}
+    </div>
+    <div class="bubble-tooltip" id="bubbleTooltip" hidden>
+      <div class="tt-name"></div>
+      <div class="tt-tagline"></div>
+      <div class="tt-tags"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="page-footer">
+  <div>© {{ current_year }} — {{ studio_name|upper }}</div>
+  <div class="page-footer-links">
+    <a href="mailto:{{ contact_email }}">{{ contact_email|upper }}</a>
+    <a href="{{ url_for('index') }}">RETOUR INDEX</a>
+    <a href="{{ url_for('login') }}">ADMIN</a>
+  </div>
+</footer>
+
+<script src="{{ url_for('static', filename='apps.js') }}"></script>
+{% endblock %}

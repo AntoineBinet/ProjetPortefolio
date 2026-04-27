@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}{{ studio_name }} — Paramètres admin{% endblock %}
+{% block body_class %}page-admin{% endblock %}
+
+{% block body %}
+<header class="topbar">
+  <a href="{{ url_for('index') }}" class="brand">{{ studio_name }}<span class="dot">.</span></a>
+  <nav class="topbar-nav">
+    <a href="{{ url_for('index') }}">Index</a>
+    <a href="{{ url_for('apps_page') }}">Apps</a>
+    <a href="{{ url_for('admin_parametres') }}" class="is-active">Admin</a>
+    <a href="{{ url_for('logout') }}" class="link-muted">Déconnexion ({{ user or '—' }})</a>
+  </nav>
+</header>
+
+<main class="admin-main">
+  <div class="hero-eyebrow">Admin · Paramètres serveur</div>
+  <h1 class="admin-title">Maintenance</h1>
+
+  <section class="admin-card">
+    <h2>État du serveur</h2>
+    <dl class="kv-grid">
+      <dt>Dossier</dt><dd><code>{{ app_dir }}</code></dd>
+      <dt>Version</dt><dd>v{{ app_version }}</dd>
+      <dt>Commit actuel</dt><dd id="curHash">…</dd>
+      <dt>Rollback dispo</dt><dd id="curRollback">…</dd>
+    </dl>
+  </section>
+
+  <section class="admin-card">
+    <h2>Mise à jour du serveur</h2>
+    <p class="muted">
+      Pull <code>origin/main</code> + redémarrage automatique en ~10 s.
+      Identique au système de Prosp'Up.
+    </p>
+    <div class="row">
+      <button id="btnPull" class="btn-primary">Mettre à jour et redémarrer</button>
+      <button id="btnRollback" class="btn-secondary">Rollback</button>
+      <button id="btnRestart" class="btn-ghost">Redémarrer</button>
+      <span id="status" class="muted small"></span>
+    </div>
+    <pre id="log" class="log" hidden></pre>
+  </section>
+</main>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const log = $("#log");
+  const status = $("#status");
+
+  async function refreshHealth() {
+    try {
+      const r = await fetch("/api/deploy/health");
+      const d = await r.json();
+      $("#curHash").textContent = d.current_hash || "?";
+      $("#curRollback").textContent = d.can_rollback ? `oui (${d.rollback_hash})` : "non";
+    } catch {}
+  }
+  refreshHealth();
+
+  $("#btnPull").addEventListener("click", async () => {
+    log.hidden = false; log.textContent = ""; status.textContent = "Pull en cours…";
+    const r = await fetch("/api/deploy/pull", { method: "POST" });
+    const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "";
+    while (true) {
+      const { value, done } = await reader.read(); if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf("\n\n")) !== -1) {
+        const ev = buf.slice(0, idx); buf = buf.slice(idx + 2);
+        if (!ev.startsWith("data:")) continue;
+        try {
+          const d = JSON.parse(ev.slice(5).trim());
+          if (d.line) log.textContent += d.line + "\n";
+          if (d.message) log.textContent += "→ " + d.message + "\n";
+          if (d.error) { log.textContent += "ERREUR : " + d.error + "\n"; status.textContent = "Erreur"; }
+          if (d.step === "done") {
+            status.textContent = d.updated ? "MAJ OK — redémarrage…" : "Déjà à jour";
+            if (d.updated) setTimeout(() => location.reload(), 12000);
+          }
+        } catch {}
+        log.scrollTop = log.scrollHeight;
+      }
+    }
+  });
+
+  $("#btnRollback").addEventListener("click", async () => {
+    if (!confirm("Rollback vers le commit précédent ?")) return;
+    status.textContent = "Rollback…";
+    const r = await fetch("/api/deploy/rollback", { method: "POST" });
+    const d = await r.json();
+    status.textContent = d.ok ? d.message : ("Erreur : " + d.error);
+    if (d.ok) setTimeout(() => location.reload(), 7000);
+  });
+
+  $("#btnRestart").addEventListener("click", async () => {
+    if (!confirm("Redémarrer le serveur ?")) return;
+    status.textContent = "Redémarrage…";
+    const r = await fetch("/api/deploy/restart", { method: "POST" });
+    const d = await r.json();
+    status.textContent = d.ok ? d.message : ("Erreur : " + d.error);
+    if (d.ok) setTimeout(() => location.reload(), 7000);
+  });
+</script>
+{% endblock %}
