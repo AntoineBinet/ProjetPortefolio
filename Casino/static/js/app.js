@@ -129,9 +129,14 @@ function route() {
     state.net = null;
   }
 
-  // Switch thème : pages "shell" en light, jeux & settings en dark
-  const isLightShell = hash === "#/" || hash === "" || hash === "#/login"
-                    || hash === "#/admin" || hash.startsWith("#/invite/");
+  // Switch thème :
+  //   - Light Portfolio : menus (home, login, admin, invite, settings)
+  //   - Dark Liquid Glass : tous les jeux (Hold'em, Blackjack, Roulette, Memory)
+  const isLightShell = hash === "#/" || hash === ""
+                    || hash === "#/login"
+                    || hash === "#/admin"
+                    || hash === "#/settings"
+                    || hash.startsWith("#/invite/");
   document.body.classList.toggle("theme-light", isLightShell);
 
   if (hash === "#/" || hash === "")           return renderHome(root);

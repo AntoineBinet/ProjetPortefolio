@@ -2376,3 +2376,311 @@ html.high-contrast .glass {
   .roulette-table { font-size: 11px; }
   .memory-board { grid-template-columns: repeat(4, 1fr); width: 100%; }
 }
+
+/* ============================================================
+   THEME LIGHT — overrides pour BJ / Roulette / Memory / Settings
+   Le wrapper et les chrome sont en light Portfolio.
+   Les "tables de jeu" (felt central + cartes + roue) gardent
+   leur ambiance casino sombre comme un vrai tapis de jeu posé
+   sur une table en bois clair.
+   ============================================================ */
+
+/* Topbar des jeux en mode light */
+.theme-light .game .topbar {
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg);
+}
+.theme-light .game .topbar-brand {
+  color: var(--muted-2);
+  font-family: var(--font-mono-light);
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  font-size: 11px;
+}
+.theme-light .game .topbar-brand svg { color: #b89b5e; }
+.theme-light .game .topbar-info {
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-family: var(--font-mono-light);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+}
+.theme-light .game .btn--ghost {
+  color: var(--muted-2);
+  font-family: var(--font-mono-light);
+  font-size: 11px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+.theme-light .game .btn--ghost:hover { color: var(--fg); background: var(--paper-2); }
+.theme-light .game .btn--icon { background: var(--card); border: 1px solid var(--line); color: var(--muted); }
+.theme-light .game .btn--icon:hover { background: var(--paper-2); color: var(--fg); }
+
+/* ── Blackjack en light ─────────────────────────────────────── */
+.theme-light .bj-game { background: var(--bg); }
+.theme-light .bj-felt {
+  /* Tapis de jeu : rectangle vert sombre posé sur le fond Portfolio */
+  margin: 24px auto;
+  width: min(720px, calc(100% - 48px));
+  flex: none;
+  background:
+    radial-gradient(ellipse at 50% 50%, #143c2e 0%, #0e2c22 60%, #081610 100%);
+  border-radius: 24px;
+  border: 1px solid rgba(184,155,94,0.32);
+  box-shadow:
+    0 24px 70px -28px rgba(0,0,0,0.42),
+    0 1px 0 rgba(255,255,255,0.08) inset,
+    0 0 0 1px rgba(0,0,0,0.06);
+  padding: 28px 24px;
+}
+.theme-light .bj-row-label {
+  color: rgba(245,246,250,0.62);
+  font-family: var(--font-mono-light);
+  font-size: 10px;
+  letter-spacing: 0.20em;
+}
+.theme-light .bj-total {
+  background: rgba(0,0,0,0.42);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.08);
+  font-family: var(--font-mono-light);
+}
+.theme-light .bj-mid .pot-label {
+  color: rgba(245,246,250,0.55);
+  font-family: var(--font-mono-light);
+  font-size: 10px;
+  letter-spacing: 0.20em;
+}
+.theme-light .bj-mid .pot-amount {
+  color: white;
+  font-family: var(--font-display-light);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.theme-light .bj-hand.is-active {
+  border-color: rgba(184,155,94,0.6);
+  box-shadow: 0 0 0 4px rgba(184,155,94,0.14);
+}
+.theme-light .bj-hand-total {
+  font-family: var(--font-mono-light);
+  color: rgba(245,246,250,0.78);
+}
+.theme-light .bj-tag {
+  background: rgba(184,155,94,0.20);
+  color: #d6b770;
+}
+
+/* HUD (footer du blackjack avec actions) en light Portfolio */
+.theme-light .bj-hud {
+  background: var(--bg);
+  border-top: 1px solid var(--line-soft);
+  padding: 18px 24px var(--safe-bottom);
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+.theme-light .bj-bet-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+}
+.theme-light .bj-bet-card::before { display: none; }
+.theme-light .bj-bet-card h3 {
+  font-family: var(--font-display-light);
+  color: var(--fg);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.theme-light .bj-bet-card p { color: var(--muted-2); }
+.theme-light .bj-bet-card .input {
+  background: var(--card); color: var(--fg);
+  border-color: var(--line);
+}
+.theme-light .bj-bet-presets button {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: var(--font-mono-light);
+}
+.theme-light .bj-bet-presets button:hover:not([disabled]) {
+  background: #0a0a0a; color: var(--bg);
+  border-color: #0a0a0a;
+}
+.theme-light .bj-bet-card .btn--primary {
+  background: #0a0a0a; color: var(--bg); border-color: #0a0a0a;
+}
+.theme-light .bj-bet-card .btn--primary:hover { background: #1a1a1a; }
+.theme-light .bj-meta { color: var(--muted-3); }
+
+/* Boutons d'action en light (Tirer/Rester/Doubler/Split, Fold/Call/Raise) */
+.theme-light .action-btn {
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.theme-light .action-btn:hover { background: var(--paper-2); border-color: var(--line-strong); }
+.theme-light .action-btn .label {
+  color: var(--muted-2);
+  font-family: var(--font-mono-light);
+  letter-spacing: 0.12em;
+}
+.theme-light .action-btn .amount {
+  font-family: var(--font-mono-light);
+  color: var(--fg);
+}
+.theme-light .action-btn--call {
+  background: rgba(46,122,72,0.10);
+  border-color: rgba(46,122,72,0.28);
+}
+.theme-light .action-btn--call:hover { background: rgba(46,122,72,0.16); }
+.theme-light .action-btn--call .label { color: #2e7a48; }
+.theme-light .action-btn--fold {
+  background: rgba(168,68,58,0.08);
+  border-color: rgba(168,68,58,0.24);
+}
+.theme-light .action-btn--fold:hover { background: rgba(168,68,58,0.14); }
+.theme-light .action-btn--fold .label { color: #a8443a; }
+.theme-light .action-btn--raise {
+  background: rgba(184,155,94,0.10);
+  border-color: rgba(184,155,94,0.32);
+}
+.theme-light .action-btn--raise:hover { background: rgba(184,155,94,0.18); }
+.theme-light .action-btn--raise .label { color: #8c733e; }
+.theme-light .action-btn--allin {
+  background: linear-gradient(180deg, #d6b770, #b89b5e);
+  color: #1a1408;
+  border-color: rgba(184,155,94,0.6);
+}
+.theme-light .action-btn--allin .label { color: rgba(26,20,8,0.62); }
+
+/* Bj result en light */
+.theme-light .bj-result {
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.theme-light .bj-result-text { color: var(--fg); }
+
+/* ── Roulette en light ──────────────────────────────────────── */
+.theme-light .roulette-game { background: var(--bg); }
+.theme-light .roulette-felt {
+  /* La zone wheel + table reste sombre (vrai tapis de roulette).
+     Le bottom bar (jetons, total, actions) passe en Portfolio light. */
+  padding: 24px 32px 0;
+}
+.theme-light .roulette-felt > .roulette-wheel-wrap,
+.theme-light .roulette-felt > .roulette-table {
+  background: linear-gradient(180deg, #0f2820 0%, #081610 100%);
+  border: 1px solid rgba(184,155,94,0.22);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 16px 48px -20px rgba(0,0,0,0.32);
+}
+.theme-light .roulette-felt > .roulette-wheel-wrap { padding: 24px; }
+.theme-light .roulette-result {
+  background: rgba(0,0,0,0.5);
+  border-color: rgba(255,255,255,0.08);
+  color: white;
+}
+.theme-light .roulette-bottombar {
+  background: var(--card);
+  border: 1px solid var(--line);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+}
+.theme-light .roulette-bottombar::before { display: none; }
+.theme-light .rb-label { color: var(--muted-2); }
+.theme-light .rb-chip {
+  background: var(--paper-2);
+  border-color: var(--line);
+  color: var(--fg);
+  font-family: var(--font-mono-light);
+}
+.theme-light .rb-chip:hover { background: var(--paper); }
+.theme-light .rb-chip.is-on  {
+  background: #0a0a0a;
+  color: var(--bg);
+  border-color: #0a0a0a;
+}
+.theme-light .rb-total { color: #b89b5e; font-family: var(--font-mono-light); }
+.theme-light .rb-actions .btn--primary {
+  background: #0a0a0a; color: var(--bg); border-color: #0a0a0a;
+}
+.theme-light .rb-actions .btn--primary[disabled] {
+  background: var(--paper-2); color: var(--muted-3); border-color: var(--line);
+}
+.theme-light .rb-actions .btn--ghost { color: var(--muted); }
+.theme-light .rb-actions .btn--ghost:hover { background: var(--paper-2); color: var(--fg); }
+
+/* ── Memory en light ────────────────────────────────────────── */
+.theme-light .memory-game { background: var(--bg); }
+.theme-light .memory-felt {
+  padding: 32px 16px;
+  background: var(--bg);
+}
+.theme-light .memory-empty .bj-bet-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.theme-light .memory-empty .bj-bet-card::before { display: none; }
+.theme-light .memory-empty h3 {
+  color: var(--fg);
+  font-family: var(--font-display-light);
+}
+.theme-light .memory-hud {
+  background: var(--bg);
+  border-top: 1px solid var(--line-soft);
+  padding: 16px 24px var(--safe-bottom);
+}
+.theme-light .memory-hud > div span,
+.theme-light .memory-hud > div strong {
+  color: var(--muted-2) !important;
+  font-family: var(--font-mono-light);
+  font-size: 11px !important;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+.theme-light .memory-hud strong { color: #b89b5e !important; }
+.theme-light .memory-hud .bj-result {
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.theme-light .memory-hud .bj-result-text { color: var(--fg); }
+.theme-light .memory-hud .bj-result-text strong { color: #2e7a48 !important; }
+
+/* ── Bandeau de fin de main (banner) en light ──────────────── */
+.theme-light .endhand-banner {
+  background: var(--fg);
+  color: var(--bg);
+  box-shadow: 0 16px 40px -12px rgba(0,0,0,0.34);
+}
+
+/* ── Settings en light : déjà override plus haut, on s'assure ─ */
+.theme-light .settings-page { background: var(--bg); color: var(--fg); }
+.theme-light .settings-page .topbar {
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg);
+}
+.theme-light .settings-page .topbar-brand {
+  color: var(--muted);
+  font-family: var(--font-mono-light);
+}
+.theme-light .settings-page .btn--ghost {
+  color: var(--muted);
+  font-family: var(--font-body-light);
+}
+.theme-light .settings-page .btn--ghost:hover { color: var(--fg); background: var(--paper-2); }
+.theme-light .settings-footer .btn--primary {
+  background: #0a0a0a; color: var(--bg); border-color: #0a0a0a;
+}
+.theme-light .settings-footer .btn--primary:hover { background: #1a1a1a; }
+
+/* ── Bet marker (chip de mise sur table roulette) ──────────── */
+.theme-light .bet-marker {
+  background: #d6b770;
+  color: #1a1408;
+}
