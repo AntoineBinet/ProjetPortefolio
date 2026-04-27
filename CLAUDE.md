@@ -65,6 +65,34 @@ Mode prod = waitress (`--prod` flag), mode dev = `app.run(debug=True)` directeme
 - L'app a son propre mécanisme de pull/rollback via `/admin/parametres` (utile depuis le navigateur
   une fois en prod)
 
+## Apps du portfolio
+
+Chaque app du portfolio = un dossier à la racine (ex: [`Casino/`](Casino/)) + une entrée dans
+`PROJECTS` dans [`app.py`](app.py). Voir [`Casino/README.md`](Casino/README.md) pour le format
+attendu de l'entrée PROJECTS.
+
+Pour scaffolder une nouvelle app :
+- Slash command : `/new-app <Nom>`
+- Ou subagent : `app-creator` (procédure complète : dossier + PROJECTS + restart + vérif)
+
+## Environnement Claude Code
+
+`.claude/` contient l'outillage de travail :
+
+| Fichier                                                          | Rôle                                                |
+| ---------------------------------------------------------------- | --------------------------------------------------- |
+| [`.claude/CHEATSHEET.md`](.claude/CHEATSHEET.md)                 | Quick reference : ops courantes, curl admin, patterns |
+| [`.claude/WORKFLOW.md`](.claude/WORKFLOW.md)                     | Règles de travail (branche unique, modif→vérif→done, etc.) |
+| [`.claude/settings.json`](.claude/settings.json)                 | Hooks Claude Code (notamment Stop = auto-push)      |
+| [`.claude/agents/app-creator.md`](.claude/agents/app-creator.md) | Subagent : scaffold une nouvelle app de A à Z       |
+| [`.claude/agents/ui-polisher.md`](.claude/agents/ui-polisher.md) | Subagent : raffinements visuels (typo, espacement, couleur) |
+| [`.claude/agents/cloudflare-ops.md`](.claude/agents/cloudflare-ops.md) | Subagent : ops Cloudflare (tunnel, KV, D1, R2, Workers) |
+| [`.claude/commands/restart.md`](.claude/commands/restart.md)     | Slash : `/restart` — restart serveur via API admin   |
+| [`.claude/commands/maj.md`](.claude/commands/maj.md)             | Slash : `/maj` — pull GitHub + restart               |
+| [`.claude/commands/new-app.md`](.claude/commands/new-app.md)     | Slash : `/new-app <Nom>` — délègue à `app-creator`   |
+
+`settings.local.json` (permissions locales d'Antoine) et `auto-push.log` sont gitignorés.
+
 ## Cloudflare
 
 - Tunnel : `mnwork` (UUID `5040bce7-4796-4a6d-9672-17d6a7335433`)

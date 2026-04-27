@@ -29,7 +29,7 @@ from flask import (
     url_for,
 )
 
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.4.2"
 APP_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORTFOLIO_PORT", "8001"))
 ADMIN_USER = os.environ.get("PORTFOLIO_USER", "admin")
@@ -42,25 +42,46 @@ STUDIO_TAGLINE = os.environ.get(
 )
 CONTACT_EMAIL = os.environ.get("PORTFOLIO_EMAIL", "hello@marienour.work")
 
-# 12 projets placeholders — éditables ici. `accent` accepte des valeurs CSS
-# modernes (oklch, hsl, hex…). `type` = "mobile" ou "web".
+# Liste des projets affichés sur la landing et /apps. Une app = un dossier
+# à la racine + une entrée ici. `accent` accepte oklch/hsl/hex, `type` =
+# "mobile" ou "web". Les nouveaux projets se créent via /new-app ou
+# l'agent app-creator (cf. .claude/).
 PROJECTS = [
-    {"id": 1,  "slug": "lumen",       "name": "Lumen",       "tagline": "Journaling app that thinks with you",      "tags": ["mobile", "ai", "wellness"],  "year": 2026, "accent": "oklch(0.72 0.14 75)",  "type": "mobile", "demo": "#"},
-    {"id": 2,  "slug": "atlas",       "name": "Atlas",       "tagline": "A new way to read the news",               "tags": ["web", "editorial"],          "year": 2026, "accent": "oklch(0.68 0.13 240)", "type": "web",    "demo": "#"},
-    {"id": 3,  "slug": "cobalt",      "name": "Cobalt",      "tagline": "Design system for indie founders",         "tags": ["web", "tools", "design"],    "year": 2025, "accent": "oklch(0.55 0.16 260)", "type": "web",    "demo": "#"},
-    {"id": 4,  "slug": "foyer",       "name": "Foyer",       "tagline": "Shared rituals for distant friends",       "tags": ["mobile", "social"],          "year": 2025, "accent": "oklch(0.72 0.14 30)",  "type": "mobile", "demo": "#"},
-    {"id": 5,  "slug": "petra",       "name": "Petra",       "tagline": "Notebook for field researchers",           "tags": ["mobile", "tools"],           "year": 2025, "accent": "oklch(0.65 0.10 140)", "type": "mobile", "demo": "#"},
-    {"id": 6,  "slug": "quill",       "name": "Quill",       "tagline": "AI co-writer for long-form prose",         "tags": ["web", "ai", "writing"],      "year": 2024, "accent": "oklch(0.62 0.14 320)", "type": "web",    "demo": "#"},
-    {"id": 7,  "slug": "mosaic",      "name": "Mosaic",      "tagline": "Visual board for creative teams",          "tags": ["web", "tools", "design"],    "year": 2024, "accent": "oklch(0.68 0.12 180)", "type": "web",    "demo": "#"},
-    {"id": 8,  "slug": "solstice",    "name": "Solstice",    "tagline": "Seasonal habit tracker",                   "tags": ["mobile", "wellness"],        "year": 2024, "accent": "oklch(0.70 0.13 60)",  "type": "mobile", "demo": "#"},
-    {"id": 9,  "slug": "ferry",       "name": "Ferry",       "tagline": "Slow travel planner",                      "tags": ["web", "travel"],             "year": 2024, "accent": "oklch(0.62 0.12 220)", "type": "web",    "demo": "#"},
-    {"id": 10, "slug": "ember",       "name": "Ember",       "tagline": "Voice memos that become essays",           "tags": ["mobile", "ai", "writing"],   "year": 2024, "accent": "oklch(0.65 0.16 40)",  "type": "mobile", "demo": "#"},
-    {"id": 11, "slug": "tidepool",    "name": "Tidepool",    "tagline": "Personal finance, without the dashboard",  "tags": ["mobile", "finance"],         "year": 2023, "accent": "oklch(0.65 0.11 200)", "type": "mobile", "demo": "#"},
-    {"id": 12, "slug": "marginalia",  "name": "Marginalia",  "tagline": "Annotate the web with friends",            "tags": ["web", "social", "tools"],    "year": 2023, "accent": "oklch(0.60 0.14 350)", "type": "web",    "demo": "#"},
+    {"id": 1, "slug": "casino", "name": "Casino", "tagline": "Texas Hold'em No-Limit — solo vs IA ou multijoueur (lien d'invitation).", "tags": ["web", "poker", "multi"], "year": 2026, "accent": "oklch(0.62 0.18 25)", "type": "web", "demo": "/casino", "cta_label": "Ouvrir l'app"},
 ]
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("PORTFOLIO_SECRET") or secrets.token_hex(32)
+
+
+@app.after_request
+def _no_cache_html(resp):
+    """Empêche le cache navigateur/CDN sur les pages HTML.
+
+    Les .css/.js ont leur propre cache-buster (?v=mtime) côté URL, donc on
+    peut leur laisser le cache CDN par défaut (4h Cloudflare). Mais le HTML
+    doit toujours être frais — sinon les nouvelles classes CSS ne matchent
+    pas l'ancien markup en cache et la page rend cassée.
+    """
+    ct = (resp.headers.get("Content-Type") or "").lower()
+    if ct.startswith("text/html"):
+        resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        resp.headers["Pragma"] = "no-cache"
+        resp.headers["Expires"] = "0"
+    return resp
+
+
+def _static_v(filename: str) -> str:
+    """Cache-buster basé sur le mtime du fichier static.
+
+    Sans ça, Cloudflare met les .css/.js en cache 4h par défaut et le navigateur
+    sert l'ancien fichier après une modif.
+    """
+    try:
+        p = APP_DIR / "static" / filename
+        return str(int(p.stat().st_mtime))
+    except Exception:
+        return APP_VERSION
 
 
 @app.context_processor
@@ -71,6 +92,7 @@ def _inject_globals():
         "contact_email": CONTACT_EMAIL,
         "current_year": datetime.datetime.now().year,
         "app_version": APP_VERSION,
+        "static_v": _static_v,
     }
 
 
@@ -104,11 +126,15 @@ def _require_same_origin():
 
 @app.route("/")
 def index():
+    """Racine = landing Portfolio (page de présentation : hero + scroll-snap
+    par projet + about). Casino et les futures apps apparaissent comme des
+    sections en bas. La page apps liste (/apps) est une vue d'index annexe."""
     return render_template("landing.html", projects=PROJECTS)
 
 
 @app.route("/apps")
 def apps_page():
+    """Vue d'index annexe — liste verticale des apps avec recherche."""
     return render_template("apps.html", projects=PROJECTS)
 
 
@@ -377,6 +403,320 @@ def api_deploy_remote_get():
 
 
 app.register_blueprint(deploy_bp)
+
+
+# ── Casino : SPA + multijoueur ────────────────────────────────────
+#
+# /casino                 → SPA (Texas Hold'em No-Limit) — page autoporteuse
+# /casino/static/<f>      → assets (CSS, JS) du SPA
+# /casino/api/room/...    → backend multijoueur (rooms en mémoire, SSE)
+#
+# Chaque room a un code à 6 caractères (alphabet sans I/O/0/1) et une URL
+# d'invitation `marienour.work/casino/#/join/<CODE>`. Un joueur ne peut accéder
+# qu'à la room dont il connaît le code (pas de listing public).
+
+import random
+import uuid
+from collections import deque
+from queue import Empty, Queue
+from threading import Lock as _ThLock
+
+CASINO_DIR = APP_DIR / "Casino"
+_ROOM_ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # sans I, O, 0, 1
+_rooms: dict[str, dict] = {}
+_rooms_lock = _ThLock()
+
+
+def _gen_room_code() -> str:
+    """Code lisible 6 chars, garanti unique parmi les rooms actives."""
+    for _ in range(50):
+        code = "".join(random.choice(_ROOM_ALPHA) for _ in range(6))
+        if code not in _rooms:
+            return code
+    return uuid.uuid4().hex[:6].upper()
+
+
+def _new_room(host_name: str, max_players: int = 6, blinds=(10, 20),
+              starting_stack: int = 2000) -> dict:
+    code = _gen_room_code()
+    host_id = uuid.uuid4().hex
+    room = {
+        "code": code,
+        "created": time.time(),
+        "host_id": host_id,
+        "phase": "lobby",          # lobby | playing | ended
+        "max_players": max_players,
+        "blinds": list(blinds),
+        "starting_stack": starting_stack,
+        "players": [{
+            "id": host_id,
+            "name": (host_name or "Hôte")[:18],
+            "ready": False,
+            "is_host": True,
+            "connected_at": time.time(),
+        }],
+        "seq": 0,                  # incrémenté à chaque mutation
+        "events": deque(maxlen=200),
+        "subscribers": [],         # liste de Queue() pour SSE
+        "game": None,              # rempli par le client hôte (autorité partagée minimale)
+        "last_activity": time.time(),
+    }
+    _rooms[code] = room
+    _publish(room, {"type": "room", "room": _public_room(room)})
+    return room
+
+
+def _public_room(room: dict) -> dict:
+    """Vue publique d'une room (sans game state — celui-là transite via events)."""
+    return {
+        "code": room["code"],
+        "phase": room["phase"],
+        "max_players": room["max_players"],
+        "blinds": room["blinds"],
+        "starting_stack": room["starting_stack"],
+        "host_id": room["host_id"],
+        "players": [
+            {"id": p["id"], "name": p["name"], "ready": p["ready"], "is_host": p["is_host"]}
+            for p in room["players"]
+        ],
+    }
+
+
+def _publish(room: dict, event: dict):
+    room["seq"] += 1
+    event["seq"] = room["seq"]
+    event["t"] = time.time()
+    room["events"].append(event)
+    room["last_activity"] = time.time()
+    dead = []
+    for q in room["subscribers"]:
+        try:
+            q.put_nowait(event)
+        except Exception:
+            dead.append(q)
+    for q in dead:
+        try:
+            room["subscribers"].remove(q)
+        except ValueError:
+            pass
+
+
+def _gc_rooms():
+    """Purge les rooms inactives depuis > 2 h."""
+    cutoff = time.time() - 2 * 3600
+    with _rooms_lock:
+        for code in list(_rooms.keys()):
+            if _rooms[code]["last_activity"] < cutoff:
+                _rooms.pop(code, None)
+
+
+@app.route("/casino")
+@app.route("/casino/")
+def casino_index():
+    """Sert le SPA Casino — page autoporteuse, sans nav portfolio."""
+    _gc_rooms()
+    try:
+        html = (CASINO_DIR / "index.html").read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return "Casino indisponible", 503
+    return Response(html, mimetype="text/html")
+
+
+@app.route("/casino/static/<path:filename>")
+def casino_static(filename: str):
+    """Sert les assets du SPA Casino (CSS, JS) depuis Casino/static/."""
+    from flask import send_from_directory
+    return send_from_directory(str(CASINO_DIR / "static"), filename, max_age=0)
+
+
+# ── API multijoueur Casino ────────────────────────────────────────
+
+@app.post("/casino/api/room/create")
+def casino_room_create():
+    data = request.get_json(silent=True) or {}
+    host_name = (data.get("name") or "Hôte").strip() or "Hôte"
+    max_players = max(2, min(6, int(data.get("max_players") or 6)))
+    sb = max(1, int(data.get("small_blind") or 10))
+    bb = max(2, int(data.get("big_blind") or 2 * sb))
+    stack = max(100, int(data.get("starting_stack") or 2000))
+    with _rooms_lock:
+        room = _new_room(host_name, max_players, (sb, bb), stack)
+    return jsonify(ok=True, code=room["code"], host_id=room["host_id"],
+                   room=_public_room(room))
+
+
+@app.post("/casino/api/room/<code>/join")
+def casino_room_join(code: str):
+    code = code.upper().strip()
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "Joueur").strip()[:18] or "Joueur"
+    with _rooms_lock:
+        room = _rooms.get(code)
+        if not room:
+            return jsonify(ok=False, error="Room introuvable"), 404
+        if room["phase"] != "lobby":
+            # on autorise toujours l'inscription en spectateur
+            return jsonify(ok=False, error="Partie déjà lancée"), 409
+        if len(room["players"]) >= room["max_players"]:
+            return jsonify(ok=False, error="Room complète"), 409
+        # nom unique au sein de la room
+        existing = {p["name"].lower() for p in room["players"]}
+        base = name
+        n = 2
+        while name.lower() in existing:
+            name = f"{base} {n}"
+            n += 1
+        pid = uuid.uuid4().hex
+        player = {
+            "id": pid, "name": name, "ready": False,
+            "is_host": False, "connected_at": time.time(),
+        }
+        room["players"].append(player)
+        _publish(room, {"type": "player_joined", "player": {
+            "id": pid, "name": name, "is_host": False, "ready": False,
+        }})
+    return jsonify(ok=True, player_id=pid, room=_public_room(room))
+
+
+@app.post("/casino/api/room/<code>/leave")
+def casino_room_leave(code: str):
+    code = code.upper().strip()
+    data = request.get_json(silent=True) or {}
+    pid = data.get("player_id")
+    with _rooms_lock:
+        room = _rooms.get(code)
+        if not room:
+            return jsonify(ok=True)
+        before = len(room["players"])
+        room["players"] = [p for p in room["players"] if p["id"] != pid]
+        if before != len(room["players"]):
+            _publish(room, {"type": "player_left", "player_id": pid})
+        if not room["players"]:
+            _rooms.pop(code, None)
+    return jsonify(ok=True)
+
+
+@app.post("/casino/api/room/<code>/ready")
+def casino_room_ready(code: str):
+    code = code.upper().strip()
+    data = request.get_json(silent=True) or {}
+    pid = data.get("player_id")
+    ready = bool(data.get("ready", True))
+    with _rooms_lock:
+        room = _rooms.get(code)
+        if not room:
+            return jsonify(ok=False, error="Room introuvable"), 404
+        for p in room["players"]:
+            if p["id"] == pid:
+                p["ready"] = ready
+                _publish(room, {"type": "player_ready", "player_id": pid, "ready": ready})
+                return jsonify(ok=True)
+    return jsonify(ok=False, error="Joueur introuvable"), 404
+
+
+@app.post("/casino/api/room/<code>/start")
+def casino_room_start(code: str):
+    code = code.upper().strip()
+    data = request.get_json(silent=True) or {}
+    pid = data.get("player_id")
+    with _rooms_lock:
+        room = _rooms.get(code)
+        if not room:
+            return jsonify(ok=False, error="Room introuvable"), 404
+        if pid != room["host_id"]:
+            return jsonify(ok=False, error="Seul l'hôte peut lancer"), 403
+        if len(room["players"]) < 2:
+            return jsonify(ok=False, error="≥ 2 joueurs requis"), 400
+        room["phase"] = "playing"
+        _publish(room, {"type": "game_start"})
+    return jsonify(ok=True)
+
+
+@app.post("/casino/api/room/<code>/action")
+def casino_room_action(code: str):
+    """Relais d'action de jeu : le serveur ne joue pas — il diffuse aux pairs.
+
+    L'hôte fait office d'autorité côté client (deck mélangé + état dérivé).
+    L'anti-cheat repose sur le fait que les hole cards des autres joueurs ne
+    sont jamais publiées en clair côté serveur — c'est l'hôte qui envoie des
+    snapshots ciblés `to=<player_id>` que seul le destinataire reçoit.
+    """
+    code = code.upper().strip()
+    data = request.get_json(silent=True) or {}
+    pid = data.get("player_id")
+    payload = data.get("payload") or {}
+    msg_type = data.get("type") or "action"
+    target = data.get("to")          # None = broadcast, sinon player_id
+    with _rooms_lock:
+        room = _rooms.get(code)
+        if not room:
+            return jsonify(ok=False, error="Room introuvable"), 404
+        # Vérif appartenance
+        if not any(p["id"] == pid for p in room["players"]):
+            return jsonify(ok=False, error="Pas dans la room"), 403
+        evt = {"type": msg_type, "from": pid, "payload": payload}
+        if target:
+            evt["to"] = target
+        _publish(room, evt)
+    return jsonify(ok=True)
+
+
+@app.get("/casino/api/room/<code>/stream")
+def casino_room_stream(code: str):
+    """SSE — flux d'événements de la room. ?player_id=<pid> requis pour filtrer
+    les messages ciblés (`to=<pid>`)."""
+    code = code.upper().strip()
+    pid = request.args.get("player_id") or ""
+    since = int(request.args.get("since") or 0)
+
+    with _rooms_lock:
+        room = _rooms.get(code)
+        if not room:
+            return jsonify(ok=False, error="Room introuvable"), 404
+        # Replay des events manquants
+        backlog = [e for e in list(room["events"]) if e.get("seq", 0) > since
+                   and (not e.get("to") or e["to"] == pid)]
+        q: Queue = Queue(maxsize=64)
+        room["subscribers"].append(q)
+
+    def gen():
+        try:
+            yield "retry: 3000\n\n"
+            yield f"data: {json.dumps({'type':'hello','room': _public_room(room)})}\n\n"
+            for e in backlog:
+                yield f"data: {json.dumps(e)}\n\n"
+            heartbeat = 0
+            while True:
+                try:
+                    e = q.get(timeout=15)
+                    if e.get("to") and e["to"] != pid:
+                        continue
+                    yield f"data: {json.dumps(e)}\n\n"
+                except Empty:
+                    heartbeat += 1
+                    yield f": ping {heartbeat}\n\n"
+        except GeneratorExit:
+            pass
+        finally:
+            try:
+                room["subscribers"].remove(q)
+            except (ValueError, KeyError):
+                pass
+
+    return Response(gen(), mimetype="text/event-stream",
+                    headers={"Cache-Control": "no-cache",
+                             "X-Accel-Buffering": "no",
+                             "Connection": "keep-alive"})
+
+
+@app.get("/casino/api/room/<code>")
+def casino_room_info(code: str):
+    code = code.upper().strip()
+    with _rooms_lock:
+        room = _rooms.get(code)
+        if not room:
+            return jsonify(ok=False, error="Room introuvable"), 404
+        return jsonify(ok=True, room=_public_room(room))
 
 
 # ── 404 (mécanisme de réparation) ─────────────────────────────────

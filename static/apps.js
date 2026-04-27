@@ -1,88 +1,70 @@
-// Apps page — Apple Watch dock with bell-curve scaling around the cursor.
+// Apps page — search filter on a vertical list. Pluralization-aware.
 
 (function () {
-  const dock = document.getElementById('dock');
-  const tooltip = document.getElementById('bubbleTooltip');
-  const stage = document.getElementById('dockStage');
-  if (!dock || !tooltip || !stage) return;
+  const input = document.getElementById('appsSearchInput');
+  const list = document.getElementById('appsList');
+  const count = document.getElementById('appsCount');
+  const empty = document.getElementById('appsEmpty');
+  const emptyTerm = document.getElementById('appsEmptyTerm');
+  if (!input || !list) return;
 
-  const BASE = Number(dock.dataset.baseSize) || 88;
-  const GAP = Number(dock.dataset.gap) || 14;
-  const RADIUS = 220;     // rayon d'influence du curseur (px)
-  const PEAK = 1.85;      // facteur d'agrandissement max
+  const items = Array.from(list.querySelectorAll('.apps-item'));
+  const total = items.length;
 
-  dock.style.setProperty('--base', BASE + 'px');
-  dock.style.setProperty('--gap', GAP + 'px');
-
-  const bubbles = Array.from(dock.querySelectorAll('.bubble'));
-  bubbles.forEach((b) => { b.style.setProperty('--size', BASE + 'px'); });
-
-  let mouseX = null;
-  let dominantBubble = null;
-
-  const scaleFor = (centerX) => {
-    if (mouseX == null) return 1;
-    const d = Math.abs(centerX - mouseX);
-    if (d > RADIUS) return 1;
-    const t = 1 - d / RADIUS;       // 0..1
-    const eased = t * t * (3 - 2 * t); // smoothstep
-    return 1 + (PEAK - 1) * eased;
+  const fmt = (n, root) => {
+    const s = n > 1 ? 's' : '';
+    return `${n} ${root}${s} affiché${s}`;
   };
 
-  const apply = () => {
-    const dockRect = dock.getBoundingClientRect();
-    let bestScale = 1;
-    let bestBubble = null;
-    bubbles.forEach((b) => {
-      const r = b.getBoundingClientRect();
-      const cx = r.left + r.width / 2 - dockRect.left;
-      // mouseX est exprimé relativement à dockRect aussi
-      const s = scaleFor(cx);
-      const lift = (s - 1) * 28;
-      b.style.transform = `translateY(-${lift}px) scale(${s})`;
-      b.style.zIndex = String(Math.round(s * 10));
-      if (s > bestScale) { bestScale = s; bestBubble = b; }
-    });
-
-    // Tooltip seulement si une bulle dépasse un certain seuil de scale
-    if (bestBubble && bestScale > 1.25) {
-      if (bestBubble !== dominantBubble) {
-        dominantBubble = bestBubble;
-        tooltip.querySelector('.tt-name').textContent = bestBubble.dataset.name || '';
-        tooltip.querySelector('.tt-tagline').textContent = bestBubble.dataset.tagline || '';
-        tooltip.querySelector('.tt-tags').textContent = (bestBubble.dataset.tags || '').toUpperCase();
+  const filter = (q) => {
+    const term = q.trim().toLowerCase();
+    let matches = 0;
+    items.forEach((it) => {
+      if (!term) {
+        it.hidden = false;
+        matches++;
+        return;
       }
-      const r = bestBubble.getBoundingClientRect();
-      const stageRect = stage.getBoundingClientRect();
-      tooltip.hidden = false;
-      tooltip.style.left = (r.left + r.width / 2 - stageRect.left) + 'px';
-      tooltip.style.top = (r.top - stageRect.top) + 'px';
-    } else {
-      tooltip.hidden = true;
-      dominantBubble = null;
-    }
-  };
-
-  let raf = null;
-  const onMouseMove = (e) => {
-    const rect = dock.getBoundingClientRect();
-    mouseX = e.clientX - rect.left;
-    if (raf == null) {
-      raf = requestAnimationFrame(() => { raf = null; apply(); });
-    }
-  };
-  const onMouseLeave = () => {
-    mouseX = null;
-    bubbles.forEach((b) => {
-      b.style.transform = '';
-      b.style.zIndex = '';
+      const hay = (it.dataset.name || '') + ' ' +
+                  (it.dataset.tagline || '') + ' ' +
+                  (it.dataset.tags || '') + ' ' +
+                  (it.dataset.year || '') + ' ' +
+                  (it.dataset.type || '');
+      const ok = hay.includes(term);
+      it.hidden = !ok;
+      if (ok) matches++;
     });
-    tooltip.hidden = true;
-    dominantBubble = null;
+
+    if (count) {
+      count.textContent = term
+        ? `${matches} / ${total} projet${total > 1 ? 's' : ''}`
+        : fmt(total, 'projet');
+    }
+    if (empty && emptyTerm) {
+      empty.hidden = matches !== 0;
+      emptyTerm.textContent = term;
+    }
   };
 
-  dock.addEventListener('mousemove', onMouseMove);
-  dock.addEventListener('mouseleave', onMouseLeave);
+  input.addEventListener('input', (e) => filter(e.target.value));
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      input.value = '';
+      filter('');
+      input.blur();
+    }
+  });
 
-  // Fallback tactile : pas de scaling, juste navigation par tap sur les liens.
+  document.addEventListener('keydown', (e) => {
+    const isMod = e.metaKey || e.ctrlKey;
+    if (isMod && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      input.focus();
+      input.select();
+    }
+    if (e.key === '/' && document.activeElement !== input) {
+      e.preventDefault();
+      input.focus();
+    }
+  });
 })();
