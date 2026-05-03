@@ -465,7 +465,7 @@ def not_found(_e):
 
 if __name__ == "__main__":
     is_prod = "--prod" in sys.argv
-    print(f"[Portfolio] v{APP_VERSION} → http://127.0.0.1:{PORT}  (prod={is_prod})")
+    print(f"[Portfolio] v{APP_VERSION} -> http://127.0.0.1:{PORT}  (prod={is_prod})")
     if is_prod:
         from waitress import serve
         serve(app, host="0.0.0.0", port=PORT, threads=8)

@@ -2,6 +2,8 @@
 setlocal
 cd /d "%~dp0"
 set PORTFOLIO_LAUNCHER=BAT
+set PYTHONIOENCODING=utf-8
+chcp 65001 >nul
 
 :loop
 python app.py --prod
