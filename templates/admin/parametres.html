@@ -212,7 +212,17 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: pass }),
       });
-      const d = await r.json();
+      let d;
+      try { d = await r.json(); } catch { d = null; }
+      if (!r.ok || !d) {
+        if (r.status === 401) {
+          st.textContent = "Session expirée — recharge la page et reconnecte-toi";
+        } else {
+          st.textContent = "Erreur serveur (" + r.status + ")";
+        }
+        st.style.color = "var(--red, #dc2626)";
+        return;
+      }
       if (d.ok) {
         st.textContent = "✓ " + d.message;
         st.style.color = "var(--green, #16a34a)";

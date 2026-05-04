@@ -409,8 +409,9 @@ def api_deploy_health():
 
 
 @deploy_bp.post("/api/deploy/change-password")
-@login_required
 def api_change_password():
+    if not _logged_in():
+        return jsonify(ok=False, error="Non autorisé — reconnecte-toi"), 401
     data = request.get_json(silent=True) or {}
     new_pass = (data.get("password") or "").strip()
     if len(new_pass) < 4:
@@ -424,8 +425,9 @@ def api_change_password():
 
 
 @deploy_bp.get("/api/deploy/prospup-status")
-@login_required
 def api_prospup_status():
+    if not _logged_in():
+        return jsonify(ok=False, error="Non autorisé"), 401
     import socket
     try:
         s = socket.create_connection(("127.0.0.1", 8000), timeout=1)
