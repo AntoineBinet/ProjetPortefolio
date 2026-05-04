@@ -30,7 +30,7 @@ from flask import (
 )
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-APP_VERSION = "0.4.4"
+APP_VERSION = "0.4.5"
 APP_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORTFOLIO_PORT", "8001"))
 ADMIN_USER = os.environ.get("PORTFOLIO_USER", "admin")
@@ -50,15 +50,13 @@ PROJECTS = [
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("PORTFOLIO_SECRET") or secrets.token_hex(32)
-# Trust X-Forwarded-Proto / X-Forwarded-Host from Cloudflare/nginx so that
-# request.host_url returns https:// instead of http://. Without this the
-# _require_same_origin() check always fails behind an SSL-terminating proxy.
+# Trust X-Forwarded-Proto from Cloudflare/nginx so request.host_url returns
+# https:// instead of http://, fixing the _require_same_origin() check.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
 @app.before_request
 def _isolate_portfolio_from_casino_users():
-    """Cloison Portfolio ↔ Casino."""
     p = request.path
     if (p.startswith("/casino")
             or p.startswith("/api/deploy")
@@ -108,8 +106,6 @@ def _inject_globals():
     }
 
 
-# ── Auth helpers ────────────────────────────────────────────
-
 def _logged_in() -> bool:
     return bool(session.get("user"))
 
@@ -141,8 +137,6 @@ def _require_same_origin():
     return None
 
 
-# ── Pages publiques ───────────────────────────────────────────
-
 @app.route("/")
 def index():
     return render_template("landing.html", projects=PROJECTS)
@@ -172,8 +166,6 @@ def logout():
     return redirect(url_for("index"))
 
 
-# ── Admin ─────────────────────────────────────────────────
-
 @app.route("/admin/parametres")
 @login_required
 def admin_parametres():
@@ -188,8 +180,6 @@ def admin_parametres():
 def parametres_legacy():
     return redirect(url_for("admin_parametres"), code=301)
 
-
-# ── Restart ───────────────────────────────────────────────
 
 def _schedule_restart(delay: float = 10.0):
     def _do():
@@ -218,8 +208,6 @@ def _schedule_restart(delay: float = 10.0):
 
     threading.Thread(target=_do, daemon=True).start()
 
-
-# ── Deploy blueprint ───────────────────────────────────────────
 
 deploy_bp = Blueprint("deploy", __name__)
 
@@ -411,7 +399,6 @@ def api_deploy_remote_get():
 
 @deploy_bp.post("/api/deploy/restart-internal")
 def api_deploy_restart_internal():
-    """Redémarrage depuis localhost uniquement — appelé par ProspUp (:8000)."""
     remote = request.environ.get("REMOTE_ADDR") or request.remote_addr or ""
     if remote not in ("127.0.0.1", "::1"):
         return jsonify(ok=False, error="Accès refusé — réseau local uniquement"), 403
@@ -419,64 +406,65 @@ def api_deploy_restart_internal():
     return jsonify(ok=True, message="Redémarrage du Portfolio dans 5 s")
 
 
-_LAUNCH_PROSPUP_HTML = """<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="utf-8">
-  <title>Relancer ProspUp</title>
-  <style>
-    body{font-family:system-ui,sans-serif;max-width:640px;margin:60px auto;padding:0 20px}
-    h1{font-size:1.4rem;margin-bottom:4px}
-    p{color:#555;margin-top:0}
-    button{padding:10px 22px;font-size:1rem;cursor:pointer;background:#2563eb;color:#fff;border:none;border-radius:6px}
-    button:disabled{opacity:.5;cursor:not-allowed}
-    pre{background:#111;color:#cfc;padding:16px;border-radius:8px;font-size:.82rem;
-        white-space:pre-wrap;word-break:break-all;min-height:60px;margin-top:16px}
-    .ok{color:#4ade80}.err{color:#f87171}
-  </style>
-</head>
-<body>
-  <h1>&#9888;&#65039; Relancer ProspUp</h1>
-  <p>Effectue un <code>git pull</code> dans le dossier ProspUp puis lance <code>python app.py --prod</code>.</p>
-  <button id="btn" onclick="doLaunch()">&#9654; Lancer ProspUp maintenant</button>
-  <pre id="out">En attente...</pre>
-  <script>
-    function doLaunch() {
-      var btn = document.getElementById('btn');
-      var out = document.getElementById('out');
-      btn.disabled = true;
-      out.textContent = 'Lancement en cours...';
-      fetch('/api/deploy/launch-prospup', {method:'POST'})
-        .then(function(r){return r.json();})
-        .then(function(d){
-          out.className = d.ok ? 'ok' : 'err';
-          out.textContent = JSON.stringify(d, null, 2);
-          if (d.ok) {
-            out.textContent += '\n\nProspUp en cours de demarrage. Attends 20 s puis ouvre prospup.work.';
-          }
-        })
-        .catch(function(e){
-          out.className = 'err';
-          out.textContent = 'Erreur reseau : ' + e.message;
-          btn.disabled = false;
-        });
-    }
-  </script>
-</body>
-</html>"""
+def _make_launch_html():
+    """Build the launch-prospup emergency page without any JS string escape issues."""
+    lines = [
+        "<!DOCTYPE html>",
+        '<html lang="fr">',
+        "<head>",
+        '  <meta charset="utf-8">',
+        "  <title>Relancer ProspUp</title>",
+        "  <style>",
+        "    body{font-family:system-ui,sans-serif;max-width:640px;margin:60px auto;padding:0 20px}",
+        "    h1{font-size:1.4rem;margin-bottom:4px}",
+        "    p{color:#555;margin-top:0}",
+        "    button{padding:10px 22px;font-size:1rem;cursor:pointer;background:#2563eb;color:#fff;border:none;border-radius:6px}",
+        "    button:disabled{opacity:.5;cursor:not-allowed}",
+        "    pre{background:#111;color:#cfc;padding:16px;border-radius:8px;font-size:.82rem;",
+        "        white-space:pre-wrap;word-break:break-all;min-height:60px;margin-top:16px}",
+        "    .ok{color:#4ade80}.err{color:#f87171}",
+        "  </style>",
+        "</head>",
+        "<body>",
+        "  <h1>&#9888;&#65039; Relancer ProspUp</h1>",
+        "  <p>Effectue un <code>git pull</code> dans le dossier ProspUp puis lance <code>python app.py --prod</code>.</p>",
+        '  <button id="btn" onclick="doLaunch()">&#9654; Lancer ProspUp maintenant</button>',
+        '  <pre id="out">En attente...</pre>',
+        "  <script>",
+        "    function doLaunch() {",
+        "      var btn = document.getElementById('btn');",
+        "      var out = document.getElementById('out');",
+        "      btn.disabled = true;",
+        "      out.textContent = 'Lancement en cours...';",
+        "      fetch('/api/deploy/launch-prospup', {method:'POST'})",
+        "        .then(function(r){return r.json();})",
+        "        .then(function(d){",
+        "          out.className = d.ok ? 'ok' : 'err';",
+        "          out.textContent = JSON.stringify(d, null, 2);",
+        "          if (d.ok) { out.textContent += ' ProspUp en cours de demarrage. Attends 20 s.'; }",
+        "        })",
+        "        .catch(function(e){",
+        "          out.className = 'err';",
+        "          out.textContent = 'Erreur : ' + e.message;",
+        "          btn.disabled = false;",
+        "        });",
+        "    }",
+        "  </script>",
+        "</body>",
+        "</html>",
+    ]
+    return "\n".join(lines)
 
 
 @deploy_bp.get("/api/deploy/launch-prospup")
 @login_required
 def api_deploy_launch_prospup_page():
-    """Page d'urgence pour relancer ProspUp depuis le Portfolio (admin uniquement)."""
-    return _LAUNCH_PROSPUP_HTML
+    return _make_launch_html()
 
 
 @deploy_bp.post("/api/deploy/launch-prospup")
 @login_required
 def api_deploy_launch_prospup():
-    """Fait un git pull dans le dossier ProspUp puis le lance en processus détaché."""
     prospup_dir = None
     candidates = [
         os.environ.get("PROSPUP_DIR"),
@@ -495,10 +483,10 @@ def api_deploy_launch_prospup():
         tried = [c for c in candidates if c]
         return jsonify(
             ok=False,
-            error=f"Repertoire ProspUp introuvable parmi : {tried}. Definissez PROSPUP_DIR.",
+            error="Repertoire ProspUp introuvable. Definissez PROSPUP_DIR. Essaye: " + str(tried),
         ), 404
 
-    log = [f"Repertoire ProspUp trouve : {prospup_dir}"]
+    log = ["Repertoire trouve : " + str(prospup_dir)]
 
     try:
         pull = subprocess.run(
@@ -506,13 +494,13 @@ def api_deploy_launch_prospup():
             cwd=str(prospup_dir),
             capture_output=True, text=True, timeout=30,
         )
-        log.append(f"git pull -> code {pull.returncode}")
+        log.append("git pull -> code " + str(pull.returncode))
         if pull.stdout.strip():
             log.append(pull.stdout.strip()[:300])
         if pull.returncode != 0 and pull.stderr.strip():
-            log.append(f"stderr : {pull.stderr.strip()[:300]}")
+            log.append("stderr : " + pull.stderr.strip()[:300])
     except Exception as exc:
-        log.append(f"git pull erreur : {exc}")
+        log.append("git pull erreur : " + str(exc))
 
     try:
         args = [sys.executable, "app.py", "--prod"]
@@ -530,10 +518,10 @@ def api_deploy_launch_prospup():
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
-        log.append(f"ProspUp lance (PID {proc.pid}) - attends 15-20 s")
+        log.append("ProspUp lance PID " + str(proc.pid))
         return jsonify(ok=True, pid=proc.pid, prospup_dir=str(prospup_dir), log=log)
     except Exception as exc:
-        log.append(f"Erreur lancement : {exc}")
+        log.append("Erreur lancement : " + str(exc))
         return jsonify(ok=False, error=str(exc), log=log), 500
 
 
