@@ -1,13 +1,14 @@
 import { useRef, useEffect } from 'react';
 
-/* PointCloud — version raffinée :
-   - moins dense (densité par défaut plus basse)
-   - mouvement plus lent, plus organique
-   - liens limités aux 3 plus proches voisins par point → moins "soupe de toile d'araignée"
-   - opacité basse au repos, l'orange ne sort qu'au hover de la souris
+/* PointCloud — version stylisée :
+   - densité moyenne, points et liens plus visibles
+   - 3 classes de points (small/medium/large) → variété visuelle
+   - liens limités aux 4 plus proches voisins par point
+   - épaisseur de ligne variable selon la distance (proche = épais)
+   - opacité plus marquée au repos, spotlight orange au hover
 */
 
-export default function PointCloud({ density = 1.6, dark = false, repel = true }) {
+export default function PointCloud({ density = 2.2, dark = false, repel = true }) {
   const canvasRef = useRef(null);
   const stateRef = useRef({ points: [], mouse: { x: -9999, y: -9999, active: false }, raf: 0 });
 
@@ -19,21 +20,30 @@ export default function PointCloud({ density = 1.6, dark = false, repel = true }
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     const initPoints = () => {
-      const count = Math.floor((w * h) / 22000 * density);
-      stateRef.current.points = Array.from({ length: count }, () => ({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.18,
-        vy: (Math.random() - 0.5) * 0.18,
-        r: Math.random() * 1.0 + 0.9,
-        phaseX: Math.random() * Math.PI * 2,
-        phaseY: Math.random() * Math.PI * 2,
-        ampX: 2 + Math.random() * 4,
-        ampY: 2 + Math.random() * 4,
-        freqX: 0.0003 + Math.random() * 0.0005,
-        freqY: 0.0003 + Math.random() * 0.0005,
-        ox: 0, oy: 0,
-      }));
+      const count = Math.floor((w * h) / 18000 * density);
+      stateRef.current.points = Array.from({ length: count }, () => {
+        // 3 classes de tailles : 60% small, 30% medium, 10% large (hubs visuels)
+        const roll = Math.random();
+        let r, sizeClass;
+        if (roll < 0.6)        { r = 1.3 + Math.random() * 0.7;  sizeClass = 0; }
+        else if (roll < 0.9)   { r = 2.0 + Math.random() * 1.0;  sizeClass = 1; }
+        else                   { r = 3.0 + Math.random() * 1.6;  sizeClass = 2; }
+        return {
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.20,
+          vy: (Math.random() - 0.5) * 0.20,
+          r,
+          sizeClass,
+          phaseX: Math.random() * Math.PI * 2,
+          phaseY: Math.random() * Math.PI * 2,
+          ampX: 2 + Math.random() * 4,
+          ampY: 2 + Math.random() * 4,
+          freqX: 0.0003 + Math.random() * 0.0005,
+          freqY: 0.0003 + Math.random() * 0.0005,
+          ox: 0, oy: 0,
+        };
+      });
     };
 
     const resize = () => {
@@ -65,9 +75,9 @@ export default function PointCloud({ density = 1.6, dark = false, repel = true }
       const now = performance.now();
       ctx.clearRect(0, 0, w, h);
 
-      const mouseR = 160;
-      const linkD = 170;
-      const NEIGHBORS = 3; // chaque point ne se relie qu'à ses N plus proches voisins
+      const mouseR = 180;
+      const linkD = 185;
+      const NEIGHBORS = 4; // chaque point ne se relie qu'à ses N plus proches voisins
 
       for (const p of points) {
         p.x += p.vx; p.y += p.vy;
@@ -98,7 +108,7 @@ export default function PointCloud({ density = 1.6, dark = false, repel = true }
       }
 
       const lineColor = dark ? 'rgba(239,136,39,' : 'rgba(17,32,42,';
-      const baseAlpha = dark ? 0.32 : 0.18;
+      const baseAlpha = dark ? 0.42 : 0.28;
 
       // 1) Liens : pour chaque point, on garde les N plus proches voisins en dessous de linkD
       const linkD2 = linkD * linkD;
@@ -126,8 +136,11 @@ export default function PointCloud({ density = 1.6, dark = false, repel = true }
           const bx = b.x + b.ox, by = b.y + b.oy;
           const d = Math.sqrt(d2);
           const t = 1 - d / linkD;
+          // épaisseur variable : proche + gros points = trait épais
+          const sizeBoost = (a.sizeClass + b.sizeClass) * 0.18;
+          const lw = 0.6 + t * 1.2 + sizeBoost;
           ctx.strokeStyle = lineColor + (t * baseAlpha).toFixed(3) + ')';
-          ctx.lineWidth = 0.7;
+          ctx.lineWidth = lw;
           ctx.beginPath();
           ctx.moveTo(ax, ay);
           ctx.lineTo(bx, by);
@@ -153,8 +166,9 @@ export default function PointCloud({ density = 1.6, dark = false, repel = true }
               const t = 1 - d / linkD;
               const md = Math.sqrt(mdx * mdx + mdy * mdy);
               const mt = Math.max(0, 1 - md / mouseR);
-              ctx.strokeStyle = `rgba(239,136,39,${(t * mt * 0.7).toFixed(3)})`;
-              ctx.lineWidth = 1.0;
+              const sizeBoost = (a.sizeClass + b.sizeClass) * 0.25;
+              ctx.strokeStyle = `rgba(239,136,39,${(t * mt * 0.85).toFixed(3)})`;
+              ctx.lineWidth = 1.0 + t * 1.4 + sizeBoost;
               ctx.beginPath();
               ctx.moveTo(ax, ay);
               ctx.lineTo(bx, by);
@@ -164,19 +178,30 @@ export default function PointCloud({ density = 1.6, dark = false, repel = true }
         }
       }
 
-      // 3) Points
+      // 3) Points — halo doux pour les hubs (sizeClass 2), point net pour tous
       for (const p of points) {
         const x = p.x + p.ox, y = p.y + p.oy;
-        let fill;
+        let fill, halo = null;
         if (mouse.active) {
           const dx = x - mouse.x, dy = y - mouse.y;
           const md = Math.sqrt(dx * dx + dy * dy);
           const mt = Math.max(0, 1 - md / mouseR);
-          fill = mt > 0.05
-            ? `rgba(239,136,39,${(0.55 + mt * 0.4).toFixed(3)})`
-            : dark ? 'rgba(255,255,255,0.42)' : 'rgba(17,32,42,0.38)';
+          if (mt > 0.05) {
+            fill = `rgba(239,136,39,${(0.65 + mt * 0.35).toFixed(3)})`;
+            if (p.sizeClass === 2) halo = `rgba(239,136,39,${(0.18 + mt * 0.2).toFixed(3)})`;
+          } else {
+            fill = dark ? 'rgba(255,255,255,0.50)' : 'rgba(17,32,42,0.46)';
+            if (p.sizeClass === 2) halo = dark ? 'rgba(239,136,39,0.18)' : 'rgba(239,136,39,0.14)';
+          }
         } else {
-          fill = dark ? 'rgba(255,255,255,0.38)' : 'rgba(17,32,42,0.34)';
+          fill = dark ? 'rgba(255,255,255,0.48)' : 'rgba(17,32,42,0.42)';
+          if (p.sizeClass === 2) halo = dark ? 'rgba(239,136,39,0.16)' : 'rgba(239,136,39,0.12)';
+        }
+        if (halo) {
+          ctx.fillStyle = halo;
+          ctx.beginPath();
+          ctx.arc(x, y, p.r * 2.4, 0, Math.PI * 2);
+          ctx.fill();
         }
         ctx.fillStyle = fill;
         ctx.beginPath();
