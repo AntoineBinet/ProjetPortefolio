@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Site d'entreprise</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+    .label {
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #555;
+    }
+    h1 {
+      font-size: clamp(2rem, 6vw, 4rem);
+      font-weight: 300;
+      letter-spacing: -0.02em;
+    }
+    .dot { color: oklch(0.62 0.18 210); }
+    p {
+      font-size: 0.95rem;
+      color: #666;
+      max-width: 36ch;
+      text-align: center;
+      line-height: 1.6;
+    }
+    a {
+      color: #e0e0e0;
+      text-decoration: none;
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-bottom: 1px solid #333;
+      padding-bottom: 2px;
+      transition: border-color 0.2s;
+    }
+    a:hover { border-color: #999; }
+  </style>
+</head>
+<body>
+  <span class="label">Portfolio · Site d'entreprise</span>
+  <h1>En construction<span class="dot">.</span></h1>
+  <p>Cette app est en cours de développement. Revenez bientôt.</p>
+  <a href="/">← Retour au portfolio</a>
+</body>
+</html>

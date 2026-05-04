@@ -48,6 +48,7 @@ CONTACT_EMAIL = os.environ.get("PORTFOLIO_EMAIL", "hello@marienour.work")
 # l'agent app-creator (cf. .claude/).
 PROJECTS = [
     {"id": 1, "slug": "casino", "name": "Casino", "tagline": "Texas Hold'em No-Limit — solo vs IA ou multijoueur (lien d'invitation).", "tags": ["web", "poker", "multi"], "year": 2026, "accent": "oklch(0.62 0.18 25)", "type": "web", "demo": "/casino", "cta_label": "Ouvrir l'app"},
+    {"id": 2, "slug": "site-entreprise", "name": "Site d'entreprise", "tagline": "Site vitrine professionnel — identité, services et contact.", "tags": ["web", "vitrine", "branding"], "year": 2026, "accent": "oklch(0.62 0.18 210)", "type": "web", "demo": "/site-entreprise", "cta_label": "Voir le site"},
 ]
 
 app = Flask(__name__)
@@ -450,8 +451,10 @@ app.register_blueprint(deploy_bp)
 # dans le package Casino/. Le Blueprint expose les routes /casino/* sans rien
 # importer du Portfolio.
 from Casino import casino_bp  # noqa: E402
+from SiteEntreprise import site_entreprise_bp  # noqa: E402
 
 app.register_blueprint(casino_bp)
+app.register_blueprint(site_entreprise_bp)
 
 
 # ── 404 (mécanisme de réparation) ─────────────────────────────────
