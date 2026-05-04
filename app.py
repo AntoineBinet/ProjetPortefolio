@@ -136,7 +136,7 @@ def _inject_globals():
     }
 
 
-# ── Auth helpers ──────────────────────────────────────────────────
+# ── Auth helpers ──────────────────────────────────────────────
 
 def _logged_in() -> bool:
     return bool(session.get("user"))
@@ -270,7 +270,7 @@ def api_deploy_pull():
 
     def gen():
         try:
-            yield f"data: {json.dumps({'step': 'log', 'line': f'Dossier : {APP_DIR}'})}\n\n"
+            yield f"data: {json.dumps({'step': 'log', 'line': f'Dossier : {APP_DIR}'})}\ n\n"
             cp = _git("rev-parse", "--git-dir", timeout=2)
             if cp.returncode != 0:
                 yield f"data: {json.dumps({'step': 'error', 'error': 'Pas un dépôt git'})}\n\n"
@@ -440,6 +440,16 @@ def api_deploy_remote_get():
     if cp.returncode != 0:
         return jsonify(ok=False, error="Pas de remote origin"), 400
     return jsonify(ok=True, url=cp.stdout.strip(), app_dir=str(APP_DIR))
+
+
+@deploy_bp.post("/api/deploy/restart-internal")
+def api_deploy_restart_internal():
+    """Redémarrage depuis localhost uniquement — appelé par ProspUp (:8000)."""
+    remote = request.environ.get("REMOTE_ADDR") or request.remote_addr or ""
+    if remote not in ("127.0.0.1", "::1"):
+        return jsonify(ok=False, error="Accès refusé — réseau local uniquement"), 403
+    _schedule_restart(delay=5.0)
+    return jsonify(ok=True, message="Redémarrage du Portfolio dans 5 s")
 
 
 app.register_blueprint(deploy_bp)
