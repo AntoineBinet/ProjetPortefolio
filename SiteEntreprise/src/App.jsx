@@ -13,7 +13,7 @@ import './styles/base.css';
 import './styles/sections.css';
 
 const tweakDefaults = {
-  density: 2.5,
+  density: 1.6,
   dark: false,
   repel: true,
   accent: '#EF8827',

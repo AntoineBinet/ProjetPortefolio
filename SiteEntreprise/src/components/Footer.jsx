@@ -1,14 +1,22 @@
 import UpLogo from './UpLogo';
 import Icon from './Icon';
+import { UP_DATA } from '../data';
 
 export default function Footer() {
+  const docs = UP_DATA.documents;
   return (
     <footer className="footer">
       <div className="container">
         <div className="footer-grid">
           <div>
             <UpLogo color="#fff" textColor="rgba(255,255,255,0.7)" size={1.1}/>
-            <p className="footer-tag">Conseil en ingénierie spécialisé en électronique, informatique embarquée et systèmes mécatroniques. 6 agences en France.</p>
+            <p className="footer-tag">
+              Conseil en ingénierie spécialisé en électronique, informatique embarquée
+              et systèmes mécatroniques. 6 agences en France.
+            </p>
+            <a className="footer-original" href={UP_DATA.contact.siteOriginal} target="_blank" rel="noopener noreferrer">
+              Site officiel · up-technologies.fr <Icon name="arrow" size={12}/>
+            </a>
           </div>
           <div>
             <h4>Site</h4>
@@ -21,28 +29,37 @@ export default function Footer() {
             </ul>
           </div>
           <div>
-            <h4>Qualité</h4>
+            <h4>Documents</h4>
             <ul>
-              <li><a href="#">Politique Qualité</a></li>
-              <li><a href="#">Code de conduite</a></li>
-              <li><a href="#">Politique RGPD</a></li>
-              <li><a href="#">Mentions légales</a></li>
+              {docs.slice(0, 4).map((d, i) => (
+                <li key={i}>
+                  <a href={d.url} target="_blank" rel="noopener noreferrer">{d.label}</a>
+                </li>
+              ))}
+              <li>
+                <a href={docs[5].url} target="_blank" rel="noopener noreferrer">Charte RGPD</a>
+              </li>
             </ul>
           </div>
           <div>
             <h4>Contact</h4>
             <ul>
-              <li><a href="mailto:contact@up-technologies.fr">contact@up-technologies.fr</a></li>
-              <li><a href="#">LinkedIn</a></li>
-              <li><a href="#">Intranet</a></li>
+              <li><a href={`mailto:${UP_DATA.contact.email}`}>{UP_DATA.contact.email}</a></li>
+              <li><a href={UP_DATA.contact.telHref}>{UP_DATA.contact.tel}</a></li>
+              <li><a href={UP_DATA.contact.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
+              <li><a href={UP_DATA.contact.intranet} target="_blank" rel="noopener noreferrer">Espace intranet</a></li>
             </ul>
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© 2026 Up Technologies</span>
+          <span>© 2026 Up Technologies — Tous droits réservés</span>
           <div className="footer-social">
-            <a href="#"><Icon name="linkedin" size={16}/></a>
-            <a href="mailto:contact@up-technologies.fr"><Icon name="mail" size={16}/></a>
+            <a href={UP_DATA.contact.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+              <Icon name="linkedin" size={16}/>
+            </a>
+            <a href={`mailto:${UP_DATA.contact.email}`} aria-label="Email">
+              <Icon name="mail" size={16}/>
+            </a>
           </div>
         </div>
       </div>

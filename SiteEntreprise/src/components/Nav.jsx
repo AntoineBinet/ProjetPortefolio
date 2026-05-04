@@ -1,5 +1,6 @@
 import UpLogo from './UpLogo';
 import Icon from './Icon';
+import { UP_DATA } from '../data';
 
 const links = [
   { id: 'home', label: "What's Up ?" },
@@ -25,10 +26,23 @@ export default function Nav({ active, onNav, dark }) {
         ))}
       </div>
       <div className="nav-icons">
-        <a className="nav-icon-btn" href="#" title="Intranet"><Icon name="lock" size={16}/></a>
-        <a className="nav-icon-btn" href="#"><Icon name="search" size={16}/></a>
-        <a className="nav-icon-btn" href="#"><Icon name="linkedin" size={16}/></a>
-        <a className="nav-icon-btn" href="mailto:contact@up-technologies.fr"><Icon name="mail" size={16}/></a>
+        <a className="nav-icon-btn"
+           href={UP_DATA.contact.intranet}
+           target="_blank" rel="noopener noreferrer"
+           title="Espace intranet"
+           aria-label="Espace intranet"
+        ><Icon name="lock" size={16}/></a>
+        <a className="nav-icon-btn"
+           href={UP_DATA.contact.linkedin}
+           target="_blank" rel="noopener noreferrer"
+           title="LinkedIn"
+           aria-label="Page LinkedIn"
+        ><Icon name="linkedin" size={16}/></a>
+        <a className="nav-icon-btn"
+           href={`mailto:${UP_DATA.contact.email}`}
+           title="Nous écrire"
+           aria-label="Envoyer un email"
+        ><Icon name="mail" size={16}/></a>
       </div>
     </nav>
   );

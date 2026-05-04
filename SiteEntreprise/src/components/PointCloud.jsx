@@ -1,6 +1,13 @@
 import { useRef, useEffect } from 'react';
 
-export default function PointCloud({ density = 2.5, dark = false, repel = true }) {
+/* PointCloud — version raffinée :
+   - moins dense (densité par défaut plus basse)
+   - mouvement plus lent, plus organique
+   - liens limités aux 3 plus proches voisins par point → moins "soupe de toile d'araignée"
+   - opacité basse au repos, l'orange ne sort qu'au hover de la souris
+*/
+
+export default function PointCloud({ density = 1.6, dark = false, repel = true }) {
   const canvasRef = useRef(null);
   const stateRef = useRef({ points: [], mouse: { x: -9999, y: -9999, active: false }, raf: 0 });
 
@@ -9,22 +16,22 @@ export default function PointCloud({ density = 2.5, dark = false, repel = true }
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let w = 0, h = 0;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
     const initPoints = () => {
-      const count = Math.floor((w * h) / 14000 * density);
+      const count = Math.floor((w * h) / 22000 * density);
       stateRef.current.points = Array.from({ length: count }, () => ({
         x: Math.random() * w,
         y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.35,
-        vy: (Math.random() - 0.5) * 0.35,
-        r: Math.random() * 1.8 + 1.2,
+        vx: (Math.random() - 0.5) * 0.18,
+        vy: (Math.random() - 0.5) * 0.18,
+        r: Math.random() * 1.0 + 0.9,
         phaseX: Math.random() * Math.PI * 2,
         phaseY: Math.random() * Math.PI * 2,
-        ampX: 4 + Math.random() * 6,
-        ampY: 4 + Math.random() * 6,
-        freqX: 0.0005 + Math.random() * 0.0008,
-        freqY: 0.0005 + Math.random() * 0.0008,
+        ampX: 2 + Math.random() * 4,
+        ampY: 2 + Math.random() * 4,
+        freqX: 0.0003 + Math.random() * 0.0005,
+        freqY: 0.0003 + Math.random() * 0.0005,
         ox: 0, oy: 0,
       }));
     };
@@ -58,8 +65,9 @@ export default function PointCloud({ density = 2.5, dark = false, repel = true }
       const now = performance.now();
       ctx.clearRect(0, 0, w, h);
 
-      const mouseR = 180;
-      const linkD = 140;
+      const mouseR = 160;
+      const linkD = 170;
+      const NEIGHBORS = 3; // chaque point ne se relie qu'à ses N plus proches voisins
 
       for (const p of points) {
         p.x += p.vx; p.y += p.vy;
@@ -76,61 +84,77 @@ export default function PointCloud({ density = 2.5, dark = false, repel = true }
           const dx = px - mouse.x, dy = py - mouse.y;
           const d = Math.sqrt(dx * dx + dy * dy);
           if (d < mouseR && d > 0.001) {
-            const f = (1 - d / mouseR) * (repel ? 1 : -1) * 0.9;
-            p.ox = fx + (dx / d) * f * 28;
-            p.oy = fy + (dy / d) * f * 28;
+            const f = (1 - d / mouseR) * (repel ? 1 : -1) * 0.7;
+            p.ox = fx + (dx / d) * f * 22;
+            p.oy = fy + (dy / d) * f * 22;
           } else {
-            p.ox = p.ox * 0.85 + fx * 0.15;
-            p.oy = p.oy * 0.85 + fy * 0.15;
+            p.ox = p.ox * 0.88 + fx * 0.12;
+            p.oy = p.oy * 0.88 + fy * 0.12;
           }
         } else {
-          p.ox = p.ox * 0.85 + fx * 0.15;
-          p.oy = p.oy * 0.85 + fy * 0.15;
+          p.ox = p.ox * 0.88 + fx * 0.12;
+          p.oy = p.oy * 0.88 + fy * 0.12;
         }
       }
 
       const lineColor = dark ? 'rgba(239,136,39,' : 'rgba(17,32,42,';
-      const baseAlpha = dark ? 0.45 : 0.32;
+      const baseAlpha = dark ? 0.32 : 0.18;
+
+      // 1) Liens : pour chaque point, on garde les N plus proches voisins en dessous de linkD
+      const linkD2 = linkD * linkD;
+      const drawn = new Set(); // évite de dessiner deux fois la même paire (a→b puis b→a)
 
       for (let i = 0; i < points.length; i++) {
         const a = points[i];
         const ax = a.x + a.ox, ay = a.y + a.oy;
-        for (let j = i + 1; j < points.length; j++) {
+        const candidates = [];
+        for (let j = 0; j < points.length; j++) {
+          if (j === i) continue;
           const b = points[j];
           const bx = b.x + b.ox, by = b.y + b.oy;
           const dx = ax - bx, dy = ay - by;
           const d2 = dx * dx + dy * dy;
-          if (d2 < linkD * linkD) {
-            const d = Math.sqrt(d2);
-            const t = 1 - d / linkD;
-            ctx.strokeStyle = lineColor + (t * baseAlpha).toFixed(3) + ')';
-            ctx.lineWidth = 1.0;
-            ctx.beginPath();
-            ctx.moveTo(ax, ay);
-            ctx.lineTo(bx, by);
-            ctx.stroke();
-          }
+          if (d2 < linkD2) candidates.push({ j, d2 });
+        }
+        candidates.sort((u, v) => u.d2 - v.d2);
+        const take = candidates.slice(0, NEIGHBORS);
+        for (const { j, d2 } of take) {
+          const key = i < j ? `${i}-${j}` : `${j}-${i}`;
+          if (drawn.has(key)) continue;
+          drawn.add(key);
+          const b = points[j];
+          const bx = b.x + b.ox, by = b.y + b.oy;
+          const d = Math.sqrt(d2);
+          const t = 1 - d / linkD;
+          ctx.strokeStyle = lineColor + (t * baseAlpha).toFixed(3) + ')';
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(ax, ay);
+          ctx.lineTo(bx, by);
+          ctx.stroke();
         }
       }
 
+      // 2) Liens orange autour de la souris (effet "spotlight")
       if (mouse.active) {
+        const mouseR2 = mouseR * mouseR * 1.4;
         for (let i = 0; i < points.length; i++) {
           const a = points[i];
           const ax = a.x + a.ox, ay = a.y + a.oy;
           const mdx = ax - mouse.x, mdy = ay - mouse.y;
-          if (mdx * mdx + mdy * mdy > mouseR * mouseR * 1.3) continue;
+          if (mdx * mdx + mdy * mdy > mouseR2) continue;
           for (let j = i + 1; j < points.length; j++) {
             const b = points[j];
             const bx = b.x + b.ox, by = b.y + b.oy;
             const dx = ax - bx, dy = ay - by;
             const d2 = dx * dx + dy * dy;
-            if (d2 < linkD * linkD) {
+            if (d2 < linkD2) {
               const d = Math.sqrt(d2);
               const t = 1 - d / linkD;
               const md = Math.sqrt(mdx * mdx + mdy * mdy);
               const mt = Math.max(0, 1 - md / mouseR);
-              ctx.strokeStyle = `rgba(239,136,39,${(t * mt * 0.85).toFixed(3)})`;
-              ctx.lineWidth = 1.4;
+              ctx.strokeStyle = `rgba(239,136,39,${(t * mt * 0.7).toFixed(3)})`;
+              ctx.lineWidth = 1.0;
               ctx.beginPath();
               ctx.moveTo(ax, ay);
               ctx.lineTo(bx, by);
@@ -140,6 +164,7 @@ export default function PointCloud({ density = 2.5, dark = false, repel = true }
         }
       }
 
+      // 3) Points
       for (const p of points) {
         const x = p.x + p.ox, y = p.y + p.oy;
         let fill;
@@ -148,10 +173,10 @@ export default function PointCloud({ density = 2.5, dark = false, repel = true }
           const md = Math.sqrt(dx * dx + dy * dy);
           const mt = Math.max(0, 1 - md / mouseR);
           fill = mt > 0.05
-            ? `rgba(239,136,39,${(0.6 + mt * 0.4).toFixed(3)})`
-            : dark ? 'rgba(255,255,255,0.55)' : 'rgba(17,32,42,0.55)';
+            ? `rgba(239,136,39,${(0.55 + mt * 0.4).toFixed(3)})`
+            : dark ? 'rgba(255,255,255,0.42)' : 'rgba(17,32,42,0.38)';
         } else {
-          fill = dark ? 'rgba(255,255,255,0.5)' : 'rgba(17,32,42,0.5)';
+          fill = dark ? 'rgba(255,255,255,0.38)' : 'rgba(17,32,42,0.34)';
         }
         ctx.fillStyle = fill;
         ctx.beginPath();

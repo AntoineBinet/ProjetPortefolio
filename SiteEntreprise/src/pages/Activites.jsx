@@ -2,33 +2,41 @@ import { useState } from 'react';
 import Icon from '../components/Icon';
 import { UP_DATA } from '../data';
 
-const sectorContent = {
-  transport: { kpi: '14', kpiLabel: 'projets ADAS depuis 2020', products: ['Véhicules autonomes', 'ADAS / vision', 'Trains, métros, tramways', 'Carrosserie & châssis'], activities: ['Architecture système', 'Validation routière', 'Sûreté de fonctionnement', 'Management de projet'] },
-  energie: { kpi: '6', kpiLabel: 'opérateurs réseau partenaires', products: ['Smart grids', 'Réseaux de distribution', 'Stockage', 'Bornes de recharge'], activities: ['Analyse fonctionnelle', 'Supervision', 'Cybersécurité OT', 'Mise en service'] },
-  sante: { kpi: 'IEC', kpiLabel: '62304 · 60601 · ISO 13485', products: ['Dispositifs médicaux', 'Imagerie', 'Systèmes perfusion', 'Implants connectés'], activities: ['Industrialisation (scale-up)', 'Conformité IEC 62304', 'Validation clinique', 'Risk management'] },
-  aero: { kpi: 'DO-178C', kpiLabel: 'niveau A · DO-254 niveau A', products: ['Avionique', 'Commandes de vol', 'Drones', 'Systèmes de mission'], activities: ['Logiciel embarqué DO-178C', 'Architecture matérielle', 'V&V', 'Support en série'] },
-  industrie: { kpi: '40+', kpiLabel: 'lignes industrielles déployées', products: ['Lignes automatisées', 'Robotique', 'Vision industrielle', 'IoT industriel'], activities: ['Implantation des systèmes', 'Programmation API', 'MES / SCADA', 'Maintenance prédictive'] },
-};
-
 export default function Activites() {
   const [active, setActive] = useState(0);
   const sectors = UP_DATA.secteurs;
-  const c = sectorContent[sectors[active].key];
+  const c = UP_DATA.sectorContent[sectors[active].key];
 
   return (
     <section className="a-section" id="activites">
       <div className="container a-head">
-        <div className="kicker">Activité · 8 métiers · 5 secteurs</div>
+        <div className="kicker">Activités · 7 métiers · 5 secteurs</div>
         <h2 className="display">
           Les <em>domaines</em> où<br/>nous apportons<br/>notre expertise.
         </h2>
+        <p className="lead">
+          Bureau d'études et conseil en ingénierie : Up Technologies couvre la chaîne complète
+          de l'électronique, de l'informatique embarquée et des systèmes mécatroniques.
+        </p>
+      </div>
+
+      {/* Bloc "Notre intervention" — 3 modes (PDF §7.1) */}
+      <div className="container a-intervention">
+        {UP_DATA.intervention.map((it, i) => (
+          <article className="a-int-card" key={i} style={{ '--i': i }}>
+            <div className="a-int-icon"><Icon name={it.icon} size={28} stroke="#EF8827"/></div>
+            <div className="a-int-num">{String(i + 1).padStart(2, '0')} / 03</div>
+            <h3>{it.title}</h3>
+            <p>{it.text}</p>
+          </article>
+        ))}
       </div>
 
       <div className="container">
         <div className="a-orbit">
           <div className="a-orbit-core">
             <div className="a-orbit-core-inner">
-              <span className="a-orbit-eyebrow">8 métiers</span>
+              <span className="a-orbit-eyebrow">7 métiers</span>
               <span className="a-orbit-label">Ingénierie<br/>complète</span>
             </div>
           </div>
@@ -63,6 +71,7 @@ export default function Activites() {
                 </button>
               ))}
             </div>
+            <p className="a-split-tagline">{sectors[active].tagline}</p>
           </aside>
           <div className="a-split-main">
             <div className="a-vis">

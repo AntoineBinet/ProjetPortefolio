@@ -14,12 +14,20 @@ export default function Manifeste() {
       </div>
       <div className="container">
         <div className="m-head">
-          <div className="kicker">5 convictions</div>
+          <div className="kicker">5 convictions · développement de systèmes complexes</div>
           <h2 className="display">
-            Conseil en ingénierie ?<br/>
-            <span className="strike">Bullshit corporate.</span><br/>
-            <em>À taille humaine.</em>
+            Alors venez<br/>
+            <em>participer</em> à notre<br/>
+            développement.
           </h2>
+          <div className="m-head-cta">
+            <a className="btn btn-primary" href="#carriere">
+              Découvrir nos opportunités <Icon name="arrow" size={16}/>
+            </a>
+            <a className="btn btn-ghost" href={`mailto:${UP_DATA.contact.email}`}>
+              Nous contacter
+            </a>
+          </div>
         </div>
       </div>
       <div className="m-rail-wrap">

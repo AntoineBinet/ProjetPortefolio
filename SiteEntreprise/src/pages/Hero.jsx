@@ -8,19 +8,19 @@ export default function Hero({ tweaks }) {
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => setIdx(i => (i + 1) % words.length), 2800);
+    const id = setInterval(() => setIdx(i => (i + 1) % words.length), 3000);
     return () => clearInterval(id);
   }, [words.length]);
 
   return (
-    <section className="hero">
+    <section className="hero" id="home">
       <div className="hero-cloud">
         <PointCloud density={tweaks.density} dark={tweaks.dark} repel={tweaks.repel} />
       </div>
       <div className="hero-grain" />
       <div className="hero-content">
         <div className="hero-eyebrow">
-          <span className="dot" /> Conseil en ingénierie · depuis 2015
+          <span className="dot" /> Conseil en ingénierie · électronique · informatique embarquée · mécatronique
         </div>
         <h1 className="hero-title">
           <span className="hero-light">What's Up ?</span>
@@ -31,23 +31,25 @@ export default function Hero({ tweaks }) {
           </span>
         </h1>
         <p className="hero-sub">
-          Nous concevons des systèmes embarqués, mécatroniques et électroniques
-          pour les industriels qui ne peuvent pas se permettre d'attendre.
+          Up Technologies — société de conseil en ingénierie et bureau d'études en électronique,
+          informatique embarquée et systèmes mécatroniques. 6 agences en France, 5 secteurs industriels.
         </p>
         <div className="hero-cta">
-          <a className="btn btn-primary" href="#manifeste">
-            Découvrir <Icon name="arrow" size={16}/>
+          <a className="btn btn-primary" href="#carriere">
+            Découvrir nos opportunités <Icon name="arrow" size={16}/>
           </a>
-          <a className="btn btn-ghost" href="#carriere">Nous rejoindre</a>
+          <a className="btn btn-ghost" href={`mailto:${UP_DATA.contact.email}`}>Nous contacter</a>
         </div>
         <div className="hero-stats">
           <div><strong>6</strong><span>agences en France</span></div>
-          <div><strong>48 h</strong><span>réactivité moyenne</span></div>
-          <div><strong>4</strong><span>certifications</span></div>
+          <div><strong>5</strong><span>secteurs industriels</span></div>
+          <div><strong>3</strong><span>certifications ISO</span></div>
+          <div><strong>CIR</strong><span>agrément recherche</span></div>
         </div>
       </div>
       <button
         className="hero-scroll"
+        aria-label="Faire défiler vers la section suivante"
         onClick={() => document.getElementById('manifeste')?.scrollIntoView({ behavior: 'smooth' })}
       >
         <Icon name="arrow-down" size={18}/>

@@ -20,10 +20,14 @@ export default function Agences() {
   return (
     <section className="g-section" id="agences">
       <div className="container g-head">
-        <div className="kicker">Implantations</div>
+        <div className="kicker">Implantations · 6 agences</div>
         <h2 className="display">
           6 agences. <em>Un seul fuseau.</em>
         </h2>
+        <p className="lead">
+          De Lyon à Sophia Antipolis, Up Technologies tisse un réseau d'agences
+          au plus près des grands pôles industriels français.
+        </p>
       </div>
 
       <div className="g-stage">
@@ -68,8 +72,8 @@ export default function Agences() {
             <h3 className="g-info-city">{a.ville}</h3>
             <div className="g-info-meta">
               <div><span>Adresse</span><strong>{a.adresse}</strong></div>
+              <div><span>Code postal</span><strong>{a.cp} · {a.pays}</strong></div>
               <div><span>Ouverture</span><strong>{a.founded} <em>· {yearsActive} ans</em></strong></div>
-              <div><span>Coordonnées</span><strong>{a.lat.toFixed(3)}°N · {a.lng.toFixed(3)}°E</strong></div>
             </div>
           </div>
         </div>
@@ -101,13 +105,21 @@ export default function Agences() {
           <div>
             <div className="kicker kicker-orange-on-dark">Contact</div>
             <h3>Une question, un projet ?<br/><em>Écrivez-nous.</em></h3>
+            <p className="g-contact-baseline">
+              Une précision sur nos activités, un besoin de consultant urgent,
+              une candidature spontanée — nous répondons sous 48 h.
+            </p>
           </div>
           <div className="g-contact-actions">
-            <a className="g-contact-link" href="mailto:contact@up-technologies.fr">
+            <a className="g-contact-link" href={`mailto:${UP_DATA.contact.email}`}>
               <span>Mail</span>
-              <strong>contact@up-technologies.fr</strong>
+              <strong>{UP_DATA.contact.email}</strong>
             </a>
-            <a className="g-contact-link" href="#">
+            <a className="g-contact-link" href={UP_DATA.contact.telHref}>
+              <span>Téléphone</span>
+              <strong>{UP_DATA.contact.tel}</strong>
+            </a>
+            <a className="g-contact-link" href={UP_DATA.contact.linkedin} target="_blank" rel="noopener noreferrer">
               <span>LinkedIn</span>
               <strong>/company/up-technologies</strong>
             </a>

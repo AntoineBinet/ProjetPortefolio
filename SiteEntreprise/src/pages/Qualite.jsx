@@ -1,13 +1,19 @@
 import CertBadge from '../components/CertBadge';
 import { UP_DATA } from '../data';
 
+const docKindLabel = {
+  qualite: 'Qualité',
+  gouvernance: 'Gouvernance',
+  rgpd: 'RGPD',
+};
+
 export default function Qualite() {
   return (
     <section className="q-section" id="qualite">
       <div className="q-ticker" aria-hidden="true">
         <div className="q-ticker-track">
           {Array.from({ length: 3 }).map((_, i) => (
-            <span key={i}>ISO 9001 · ISO 14001 · ISO 27001 · EcoVadis Silver · Agrément CIR · ISO 9001 · ISO 14001 · ISO 27001 · EcoVadis Silver · Agrément CIR · </span>
+            <span key={i}>ISO 9001 · ISO 14001 · ISO 27001 · EcoVadis Silver · Agrément CIR · Time for the Planet · ISO 9001 · ISO 14001 · ISO 27001 · EcoVadis Silver · Agrément CIR · Time for the Planet · </span>
           ))}
         </div>
       </div>
@@ -22,10 +28,25 @@ export default function Qualite() {
             appuyée sur les normes ISO 9001, ISO 14001, ISO 27001 et la démarche EcoVadis.
             Nos activités R&D sont reconnues par l'agrément CIR.
           </p>
-          <div className="q-links">
-            <a href="#" className="q-link"><span className="q-link-arrow">↓</span> Politique Qualité 2024–2025 <span className="q-link-meta">PDF · 2 Mo</span></a>
-            <a href="#" className="q-link"><span className="q-link-arrow">↓</span> Code de conduite & éthique <span className="q-link-meta">PDF · 1 Mo</span></a>
-            <a href="#" className="q-link"><span className="q-link-arrow">↓</span> Politique RGPD <span className="q-link-meta">PDF · 800 Ko</span></a>
+
+          <div className="q-docs">
+            <div className="q-docs-title">Documents publics</div>
+            {UP_DATA.documents.map((d, i) => (
+              <a
+                key={i}
+                href={d.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`q-link q-link-${d.kind}`}
+              >
+                <span className="q-link-arrow">↓</span>
+                <span className="q-link-label">
+                  {d.label}
+                  <span className="q-link-ref">{d.ref}</span>
+                </span>
+                <span className="q-link-meta">PDF</span>
+              </a>
+            ))}
           </div>
         </div>
         <div className="q-stack">
