@@ -31,7 +31,6 @@
     <h2>Mise à jour du serveur</h2>
     <p class="muted">
       Pull <code>origin/main</code> + redémarrage automatique en ~10 s.
-      Identique au système de Prosp'Up.
     </p>
     <div class="row">
       <button id="btnPull" class="btn-primary">Mettre à jour et redémarrer</button>
@@ -41,7 +40,48 @@
     </div>
     <pre id="log" class="log" hidden></pre>
   </section>
+
+  <section class="admin-card">
+    <h2>ProspUp</h2>
+    <p class="muted">
+      Vérifie si ProspUp tourne sur le port&nbsp;8000 et le relance si besoin.
+    </p>
+    <div class="row">
+      <span id="prospupStatus" class="muted small">Vérification…</span>
+      <button id="btnProspup" class="btn-secondary" disabled>Relancer ProspUp</button>
+    </div>
+    <pre id="prospupLog" class="log" hidden></pre>
+  </section>
+
+  <section class="admin-card">
+    <h2>Sécurité</h2>
+    <p class="muted">
+      Changer le mot de passe administrateur. La modification est persistante (fichier local).
+    </p>
+    <form id="formPass" class="pass-form">
+      <div class="pass-row">
+        <input id="newPass" type="password" placeholder="Nouveau mot de passe" autocomplete="new-password" minlength="4" required>
+        <input id="confirmPass" type="password" placeholder="Confirmer" autocomplete="new-password" minlength="4" required>
+        <button type="submit" class="btn-primary">Mettre à jour</button>
+      </div>
+      <span id="passStatus" class="muted small"></span>
+    </form>
+  </section>
 </main>
+
+<style>
+  .pass-form { display: flex; flex-direction: column; gap: .6rem; }
+  .pass-row { display: flex; gap: .6rem; flex-wrap: wrap; }
+  .pass-row input {
+    flex: 1 1 180px;
+    padding: .5rem .75rem;
+    border: 1px solid var(--border, #e5e5e5);
+    border-radius: 6px;
+    font-size: .9rem;
+    background: var(--surface, #fff);
+    color: var(--text, #111);
+  }
+</style>
 
 <script>
   const $ = (s) => document.querySelector(s);
@@ -100,6 +140,92 @@
     const d = await r.json();
     status.textContent = d.ok ? d.message : ("Erreur : " + d.error);
     if (d.ok) setTimeout(() => location.reload(), 7000);
+  });
+
+  // ProspUp section
+  async function checkProspup() {
+    try {
+      const r = await fetch("/api/deploy/prospup-status");
+      const d = await r.json();
+      const st = $("#prospupStatus");
+      const btn = $("#btnProspup");
+      if (d.running) {
+        st.textContent = "✓ ProspUp tourne sur le port 8000";
+        st.style.color = "var(--green, #16a34a)";
+        btn.disabled = true;
+      } else {
+        st.textContent = "⚠ ProspUp ne répond pas sur le port 8000";
+        st.style.color = "var(--red, #dc2626)";
+        btn.disabled = false;
+      }
+    } catch {
+      $("#prospupStatus").textContent = "Impossible de vérifier le statut";
+    }
+  }
+  checkProspup();
+
+  $("#btnProspup").addEventListener("click", async () => {
+    const btn = $("#btnProspup");
+    const plog = $("#prospupLog");
+    const st = $("#prospupStatus");
+    btn.disabled = true;
+    st.textContent = "Lancement en cours…";
+    plog.hidden = false;
+    plog.textContent = "";
+    try {
+      const r = await fetch("/api/deploy/launch-prospup", { method: "POST" });
+      const d = await r.json();
+      if (d.ok) {
+        plog.textContent = (d.log || []).join("\n") + "\nPID : " + d.pid;
+        st.textContent = "ProspUp lancé — attends 20 s avant de vérifier";
+        st.style.color = "";
+        setTimeout(checkProspup, 20000);
+      } else {
+        plog.textContent = "Erreur : " + (d.error || JSON.stringify(d));
+        if (d.log) plog.textContent += "\n" + d.log.join("\n");
+        st.textContent = "Échec du lancement";
+        st.style.color = "var(--red, #dc2626)";
+        btn.disabled = false;
+      }
+    } catch (e) {
+      plog.textContent = "Erreur réseau : " + e.message;
+      btn.disabled = false;
+    }
+  });
+
+  // Password change
+  $("#formPass").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const pass = $("#newPass").value;
+    const confirm = $("#confirmPass").value;
+    const st = $("#passStatus");
+    if (pass !== confirm) {
+      st.textContent = "Les mots de passe ne correspondent pas";
+      st.style.color = "var(--red, #dc2626)";
+      return;
+    }
+    st.textContent = "Mise à jour…";
+    st.style.color = "";
+    try {
+      const r = await fetch("/api/deploy/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pass }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        st.textContent = "✓ " + d.message;
+        st.style.color = "var(--green, #16a34a)";
+        $("#newPass").value = "";
+        $("#confirmPass").value = "";
+      } else {
+        st.textContent = "Erreur : " + d.error;
+        st.style.color = "var(--red, #dc2626)";
+      }
+    } catch (e) {
+      st.textContent = "Erreur réseau : " + e.message;
+      st.style.color = "var(--red, #dc2626)";
+    }
   });
 </script>
 {% endblock %}

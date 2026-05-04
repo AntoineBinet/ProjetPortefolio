@@ -36,6 +36,26 @@ PORT = int(os.environ.get("PORTFOLIO_PORT", "8001"))
 ADMIN_USER = os.environ.get("PORTFOLIO_USER", "admin")
 ADMIN_PASS = os.environ.get("PORTFOLIO_PASS", "admin")
 
+CONFIG_FILE = APP_DIR / ".portfolio_config.json"
+
+
+def _load_config() -> dict:
+    try:
+        return json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _save_config(data: dict) -> None:
+    CONFIG_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+_local_cfg = _load_config()
+if _local_cfg.get("admin_pass"):
+    ADMIN_PASS = _local_cfg["admin_pass"]
+if _local_cfg.get("admin_user"):
+    ADMIN_USER = _local_cfg["admin_user"]
+
 STUDIO_NAME = os.environ.get("PORTFOLIO_NAME", "Antoine Binet")
 STUDIO_TAGLINE = os.environ.get(
     "PORTFOLIO_TAGLINE",
@@ -386,6 +406,34 @@ def api_deploy_health():
                        server_time=datetime.datetime.now().isoformat(timespec="seconds"))
     except Exception as e:
         return jsonify(ok=False, error=str(e)), 500
+
+
+@deploy_bp.post("/api/deploy/change-password")
+@login_required
+def api_change_password():
+    data = request.get_json(silent=True) or {}
+    new_pass = (data.get("password") or "").strip()
+    if len(new_pass) < 4:
+        return jsonify(ok=False, error="Mot de passe trop court (min 4 caractères)"), 400
+    global ADMIN_PASS
+    ADMIN_PASS = new_pass
+    cfg = _load_config()
+    cfg["admin_pass"] = new_pass
+    _save_config(cfg)
+    return jsonify(ok=True, message="Mot de passe mis à jour")
+
+
+@deploy_bp.get("/api/deploy/prospup-status")
+@login_required
+def api_prospup_status():
+    import socket
+    try:
+        s = socket.create_connection(("127.0.0.1", 8000), timeout=1)
+        s.close()
+        running = True
+    except Exception:
+        running = False
+    return jsonify(ok=True, running=running)
 
 
 @deploy_bp.get("/api/deploy/remote")
