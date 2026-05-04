@@ -8,6 +8,7 @@ venv/
 logs/
 *.log
 .env
+.portfolio_config.json
 .DS_Store
 Thumbs.db
 
