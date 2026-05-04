@@ -59,7 +59,7 @@ app.secret_key = os.environ.get("PORTFOLIO_SECRET") or secrets.token_hex(32)
 def _isolate_portfolio_from_casino_users():
     """Cloison Portfolio ↔ Casino.
 
-    Tout utilisateur loggé côté Casino (cookie `casino_session`) est REDIRIGÉ
+    Tout utilisateur loggé côté Casino (cookie `casino_session`) est REDIRIGé
     vers `/casino` s'il essaie d'accéder à une route Portfolio (landing,
     /apps, /admin/*, /login, etc.). L'admin Portfolio (session Flask `user`)
     garde un accès illimité car c'est lui qui héberge.
@@ -136,7 +136,7 @@ def _inject_globals():
     }
 
 
-# ── Auth helpers ──────────────────────────────────────────────
+# ── Auth helpers ────────────────────────────────────────────
 
 def _logged_in() -> bool:
     return bool(session.get("user"))
@@ -162,7 +162,7 @@ def _require_same_origin():
     return None
 
 
-# ── Pages publiques ───────────────────────────────────────────────
+# ── Pages publiques ───────────────────────────────────────────
 
 @app.route("/")
 def index():
@@ -197,7 +197,7 @@ def logout():
     return redirect(url_for("index"))
 
 
-# ── Admin ─────────────────────────────────────────────────────────
+# ── Admin ─────────────────────────────────────────────────
 
 @app.route("/admin/parametres")
 @login_required
@@ -215,7 +215,7 @@ def parametres_legacy():
     return redirect(url_for("admin_parametres"), code=301)
 
 
-# ── Restart ───────────────────────────────────────────────────────
+# ── Restart ───────────────────────────────────────────────
 
 def _schedule_restart(delay: float = 10.0):
     """Quitte avec exit code 42 → boucle du _run_serveur.bat relance.
@@ -249,7 +249,7 @@ def _schedule_restart(delay: float = 10.0):
     threading.Thread(target=_do, daemon=True).start()
 
 
-# ── Deploy blueprint ──────────────────────────────────────────────
+# ── Deploy blueprint ───────────────────────────────────────────
 
 deploy_bp = Blueprint("deploy", __name__)
 
@@ -270,7 +270,7 @@ def api_deploy_pull():
 
     def gen():
         try:
-            yield f"data: {json.dumps({'step': 'log', 'line': f'Dossier : {APP_DIR}'})}\ n\n"
+            yield f"data: {json.dumps({'step': 'log', 'line': f'Dossier : {APP_DIR}'})}\n\n"
             cp = _git("rev-parse", "--git-dir", timeout=2)
             if cp.returncode != 0:
                 yield f"data: {json.dumps({'step': 'error', 'error': 'Pas un dépôt git'})}\n\n"
@@ -452,6 +452,135 @@ def api_deploy_restart_internal():
     return jsonify(ok=True, message="Redémarrage du Portfolio dans 5 s")
 
 
+@deploy_bp.get("/api/deploy/launch-prospup")
+@login_required
+def api_deploy_launch_prospup_page():
+    """Page d'urgence pour relancer ProspUp depuis le Portfolio (admin uniquement)."""
+    return """
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Relancer ProspUp — urgence</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 640px; margin: 60px auto; padding: 0 20px; }
+    h1 { font-size: 1.4rem; margin-bottom: 4px; }
+    p  { color: #555; margin-top: 0; }
+    button { padding: 10px 22px; font-size: 1rem; cursor: pointer;
+             background: #2563eb; color: #fff; border: none; border-radius: 6px; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    pre  { background: #111; color: #cfc; padding: 16px; border-radius: 8px;
+           font-size: .82rem; white-space: pre-wrap; word-break: break-all;
+           min-height: 60px; margin-top: 16px; }
+    .ok  { color: #4ade80; }
+    .err { color: #f87171; }
+  </style>
+</head>
+<body>
+  <h1>⚠️ Relancer ProspUp</h1>
+  <p>Cette page effectue un <code>git pull</code> dans le dossier ProspUp puis lance <code>python app.py --prod</code>.</p>
+  <button id="btn" onclick="launch()">&#9654; Lancer ProspUp maintenant</button>
+  <pre id="out">En attente…</pre>
+  <script>
+    async function launch() {
+      const btn = document.getElementById('btn');
+      const out  = document.getElementById('out');
+      btn.disabled = true;
+      out.textContent = 'Lancement en cours…';
+      try {
+        const r = await fetch('/api/deploy/launch-prospup', { method: 'POST' });
+        const d = await r.json();
+        out.className = d.ok ? 'ok' : 'err';
+        out.textContent = JSON.stringify(d, null, 2);
+        if (d.ok) {
+          out.textContent += '\n\nProspUp est en train de démarrer.\nAttends 15–20 secondes puis ouvre prospup.work';
+        }
+      } catch(e) {
+        out.className = 'err';
+        out.textContent = 'Erreur réseau : ' + e.message;
+        btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
+"""
+
+
+@deploy_bp.post("/api/deploy/launch-prospup")
+@login_required
+def api_deploy_launch_prospup():
+    """Fait un git pull dans le dossier ProspUp puis le lance en processus détaché.
+
+    Détection automatique du répertoire (frère du Portfolio) ou via
+    la variable d'environnement PROSPUP_DIR.
+    """
+    # Trouver le répertoire ProspUp
+    prospup_dir: Path | None = None
+    candidates = [
+        os.environ.get("PROSPUP_DIR"),
+        str(APP_DIR.parent / "Prosp_UpV30"),
+        str(APP_DIR.parent / "prosp_upv30"),
+        str(APP_DIR.parent / "ProspUp"),
+        str(APP_DIR.parent / "prospup"),
+        str(APP_DIR.parent / "Prospup"),
+    ]
+    for c in candidates:
+        if c and Path(c).is_dir() and (Path(c) / "app.py").exists():
+            prospup_dir = Path(c)
+            break
+
+    if prospup_dir is None:
+        tried = [c for c in candidates if c]
+        return jsonify(
+            ok=False,
+            error=(
+                f"Répertoire ProspUp introuvable parmi : {tried}. "
+                "Définissez la variable d'environnement PROSPUP_DIR."
+            ),
+        ), 404
+
+    log = [f"Répertoire ProspUp trouvé : {prospup_dir}"]
+
+    # git pull pour récupérer le correctif
+    try:
+        pull = subprocess.run(
+            ["git", "pull", "origin", "main"],
+            cwd=str(prospup_dir),
+            capture_output=True, text=True, timeout=30,
+        )
+        log.append(f"git pull → code {pull.returncode}")
+        if pull.stdout.strip():
+            log.append(pull.stdout.strip()[:300])
+        if pull.returncode != 0 and pull.stderr.strip():
+            log.append(f"stderr : {pull.stderr.strip()[:300]}")
+    except Exception as exc:
+        log.append(f"git pull erreur : {exc}")
+
+    # Lancer ProspUp en processus détaché
+    try:
+        args = [sys.executable, "app.py", "--prod"]
+        flags = 0
+        if sys.platform == "win32":
+            try:
+                flags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+            except AttributeError:
+                flags = subprocess.CREATE_NEW_PROCESS_GROUP
+        proc = subprocess.Popen(
+            args,
+            cwd=str(prospup_dir),
+            creationflags=flags if sys.platform == "win32" else 0,
+            start_new_session=(sys.platform != "win32"),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        log.append(f"ProspUp lancé (PID {proc.pid}) — attends 15–20 s")
+        return jsonify(ok=True, pid=proc.pid, prospup_dir=str(prospup_dir), log=log)
+    except Exception as exc:
+        log.append(f"Erreur lancement : {exc}")
+        return jsonify(ok=False, error=str(exc), log=log), 500
+
+
 app.register_blueprint(deploy_bp)
 
 
@@ -467,14 +596,14 @@ app.register_blueprint(casino_bp)
 app.register_blueprint(site_entreprise_bp)
 
 
-# ── 404 (mécanisme de réparation) ─────────────────────────────────
+# ── 404 (mécanisme de réparation) ─────────────────────────────
 
 @app.errorhandler(404)
 def not_found(_e):
     return render_template("404.html"), 404
 
 
-# ── Main ──────────────────────────────────────────────────────────
+# ── Main ───────────────────────────────────────────────────
 
 if __name__ == "__main__":
     is_prod = "--prod" in sys.argv
