@@ -28,8 +28,9 @@ from flask import (
     session,
     url_for,
 )
+from werkzeug.middleware.proxy_fix import ProxyFix
 
-APP_VERSION = "0.4.2"
+APP_VERSION = "0.4.3"
 APP_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORTFOLIO_PORT", "8001"))
 ADMIN_USER = os.environ.get("PORTFOLIO_USER", "admin")
@@ -53,6 +54,10 @@ PROJECTS = [
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("PORTFOLIO_SECRET") or secrets.token_hex(32)
+# Trust X-Forwarded-Proto / X-Forwarded-Host from Cloudflare/nginx so that
+# request.host_url returns https:// instead of http://. Without this the
+# _require_same_origin() check always fails behind an SSL-terminating proxy.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
 @app.before_request
@@ -154,10 +159,17 @@ def login_required(view):
 def _require_same_origin():
     origin = request.headers.get("Origin") or ""
     referer = request.headers.get("Referer") or ""
-    host = request.host_url.rstrip("/")
-    if origin and not origin.startswith(host):
+
+    def _strip_scheme(url: str) -> str:
+        for s in ("https://", "http://"):
+            if url.lower().startswith(s):
+                return url[len(s):]
+        return url
+
+    host = _strip_scheme(request.host_url.rstrip("/"))
+    if origin and not _strip_scheme(origin).startswith(host):
         return jsonify(ok=False, error="Origine non autorisée"), 403
-    if not origin and referer and not referer.startswith(host):
+    if not origin and referer and not _strip_scheme(referer).startswith(host):
         return jsonify(ok=False, error="Referer non autorisé"), 403
     return None
 
@@ -477,7 +489,7 @@ def api_deploy_launch_prospup_page():
   </style>
 </head>
 <body>
-  <h1>⚠️ Relancer ProspUp</h1>
+  <h1>&#9888;&#65039; Relancer ProspUp</h1>
   <p>Cette page effectue un <code>git pull</code> dans le dossier ProspUp puis lance <code>python app.py --prod</code>.</p>
   <button id="btn" onclick="launch()">&#9654; Lancer ProspUp maintenant</button>
   <pre id="out">En attente…</pre>
