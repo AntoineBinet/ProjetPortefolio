@@ -17,9 +17,12 @@ const sectorPhoto = {
 
 export default function Activites() {
   const [active, setActive] = useState(0);
+  const [activeMetier, setActiveMetier] = useState(null);
   const sectors = UP_DATA.secteurs;
   const c = UP_DATA.sectorContent[sectors[active].key];
   const photo = sectorPhoto[sectors[active].key];
+  const metiers = UP_DATA.metiers;
+  const metierFocus = activeMetier !== null ? metiers[activeMetier] : null;
 
   return (
     <section className="a-section" id="activites">
@@ -48,27 +51,86 @@ export default function Activites() {
       </div>
 
       <div className="container">
-        <div className="a-orbit">
-          <div className="a-orbit-core">
-            <div className="a-orbit-core-inner">
+        <div
+          className={`a-orbit ${metierFocus ? 'a-orbit--focus' : ''}`}
+          onMouseLeave={() => setActiveMetier(null)}
+        >
+          <div className={`a-orbit-core ${metierFocus ? 'a-orbit-core--detail' : ''}`}>
+            <div className="a-orbit-core-idle" aria-hidden={!!metierFocus}>
               <span className="a-orbit-eyebrow">7 métiers</span>
               <span className="a-orbit-label">Ingénierie<br/>complète</span>
+              <span className="a-orbit-hint">Survolez un métier</span>
+            </div>
+            <div className="a-orbit-core-detail-inner" aria-hidden={!metierFocus}>
+              {metierFocus && (
+                <>
+                  <div className="a-orbit-detail-icon">
+                    <Icon name={metierFocus.icon} size={26} stroke="#EF8827"/>
+                  </div>
+                  <div className="a-orbit-detail-num">
+                    {String(activeMetier + 1).padStart(2, '0')} / 07
+                  </div>
+                  <h3 className="a-orbit-detail-title">{metierFocus.name}</h3>
+                  <p className="a-orbit-detail-desc">{metierFocus.description}</p>
+                  <ul className="a-orbit-detail-list">
+                    {metierFocus.examples.map((ex, i) => (
+                      <li key={ex} style={{ '--d': `${0.08 + i * 0.05}s` }}>
+                        <span className="a-orbit-detail-bullet"/>{ex}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
             </div>
           </div>
           <div className="a-orbit-ring r1" />
           <div className="a-orbit-ring r2" />
-          {UP_DATA.metiers.map((m, i, arr) => {
+          {metiers.map((m, i, arr) => {
             const angle = (i / arr.length) * Math.PI * 2 - Math.PI / 2;
-            const radius = i % 2 === 0 ? 38 : 46;
+            const radius = i % 2 === 0 ? 44 : 52;
             const x = 50 + Math.cos(angle) * radius;
             const y = 50 + Math.sin(angle) * radius;
+            const isActive = activeMetier === i;
             return (
-              <div key={m} className="a-orbit-chip" style={{ left: `${x}%`, top: `${y}%`, '--d': `${i * 0.08}s` }}>
-                <span className="a-orbit-dot"/>
-                {m}
-              </div>
+              <button
+                key={m.name}
+                type="button"
+                className={`a-orbit-chip ${isActive ? 'a-orbit-chip--active' : ''} ${activeMetier !== null && !isActive ? 'a-orbit-chip--dim' : ''}`}
+                style={{ left: `${x}%`, top: `${y}%`, '--d': `${i * 0.08}s` }}
+                onMouseEnter={() => setActiveMetier(i)}
+                onFocus={() => setActiveMetier(i)}
+                onBlur={() => setActiveMetier(null)}
+                aria-label={`Métier : ${m.name}`}
+              >
+                <span className="a-orbit-chip-icon">
+                  <Icon name={m.icon} size={14}/>
+                </span>
+                <span className="a-orbit-chip-label">{m.name}</span>
+              </button>
             );
           })}
+        </div>
+
+        {/* Mobile : grid d'expandable cards (l'orbit serait illisible) */}
+        <div className="a-metiers-grid">
+          {metiers.map((m, i) => (
+            <details key={m.name} className="a-metier-card" style={{ '--d': `${i * 0.05}s` }}>
+              <summary>
+                <span className="a-metier-card-icon"><Icon name={m.icon} size={18} stroke="#EF8827"/></span>
+                <span className="a-metier-card-num">{String(i + 1).padStart(2, '0')}</span>
+                <span className="a-metier-card-name">{m.name}</span>
+                <span className="a-metier-card-chev" aria-hidden="true">+</span>
+              </summary>
+              <div className="a-metier-card-body">
+                <p>{m.description}</p>
+                <ul>
+                  {m.examples.map((ex) => (
+                    <li key={ex}><span className="a-orbit-detail-bullet"/>{ex}</li>
+                  ))}
+                </ul>
+              </div>
+            </details>
+          ))}
         </div>
       </div>
 
