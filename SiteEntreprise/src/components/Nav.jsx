@@ -19,27 +19,23 @@ export default function Nav({ active, onNav, dark }) {
 
   const lockTitle = !loaded
     ? 'Vérification de la session…'
-    : !auth.authenticated
-      ? 'Mode édition — déverrouiller (mot de passe)'
-      : editMode
-        ? (dirty
-            ? 'Verrouiller : enregistrer les modifications et quitter le mode édition'
-            : 'Verrouiller : quitter le mode édition')
-        : 'Activer le mode édition';
+    : editMode
+      ? (dirty
+          ? 'Verrouiller : enregistrer les modifications et quitter le mode édition'
+          : 'Verrouiller : quitter le mode édition')
+      : 'Activer le mode édition (mot de passe requis)';
 
   const onLockClick = async (e) => {
     e.preventDefault();
     if (!loaded || saving) return;
-    if (!auth.authenticated) {
-      setShowLogin(true);
-      return;
-    }
     if (editMode) {
       // Cadenas refermé : sauve si nécessaire puis sort du mode édition
       await exitEditMode();
-    } else {
-      setEditMode(true);
+      return;
     }
+    // Toujours redemander le mot de passe avant d'entrer en mode édition,
+    // même si la session est déjà authentifiée — évite les activations accidentelles.
+    setShowLogin(true);
   };
 
   const lockClass = [
