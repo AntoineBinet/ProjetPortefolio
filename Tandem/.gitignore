@@ -1,0 +1,7 @@
+# Données runtime — propres à chaque déploiement
+tandem.db
+tandem.db-wal
+tandem.db-shm
+uploads/
+__pycache__/
+*.pyc

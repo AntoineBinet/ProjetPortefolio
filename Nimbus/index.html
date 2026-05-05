@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0e">
+<meta name="color-scheme" content="dark">
+<meta name="referrer" content="no-referrer">
+<title>NIMBUS · Le silence, sculpté.</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0e'/%3E%3Cpath d='M7 18 V14 a9 9 0 0 1 18 0 V18 M6 17 h4 v8 h-4 z M22 17 h4 v8 h-4 z' stroke='%23c9b8ff' stroke-width='1.6' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/nimbus/static/style.css?v=1">
+</head>
+<body>
+
+<!-- ============================================================
+     SVG defs — gradients, filtres, le casque maître réutilisé
+     ============================================================ -->
+<svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true">
+  <defs>
+    <linearGradient id="cup-gradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--cup-1, #5a4ddc)"/>
+      <stop offset="0.5" stop-color="var(--cup-2, #2d2473)"/>
+      <stop offset="1" stop-color="var(--cup-3, #0d0825)"/>
+    </linearGradient>
+    <linearGradient id="cup-rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--rim-1, #8c7eff)"/>
+      <stop offset="1" stop-color="var(--rim-2, #2a1f6b)"/>
+    </linearGradient>
+    <linearGradient id="band-gradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--band-1, #d2c8ff)"/>
+      <stop offset="0.5" stop-color="var(--band-2, #6f64c4)"/>
+      <stop offset="1" stop-color="var(--band-3, #2c2569)"/>
+    </linearGradient>
+    <radialGradient id="cushion-gradient" cx="0.4" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#1a1230"/>
+      <stop offset="1" stop-color="#06030f"/>
+    </radialGradient>
+    <filter id="soft-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6"/>
+      <feOffset dx="0" dy="14" result="off"/>
+      <feFlood flood-color="rgba(0,0,0,0.45)"/>
+      <feComposite in2="off" operator="in"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="metallic" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="2" seed="3"/>
+      <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.06 0"/>
+      <feComposite in2="SourceGraphic" operator="in"/>
+      <feMerge><feMergeNode in="SourceGraphic"/><feMergeNode/></feMerge>
+    </filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="2.2" numOctaves="2" seed="11"/>
+      <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0"/>
+    </filter>
+
+    <!-- Le casque maître — réutilisé via <use> partout -->
+    <symbol id="headphones" viewBox="0 0 600 540">
+      <!-- Sangle arrière (bandeau métallique extérieur) -->
+      <path d="M 90 270 C 90 90, 510 90, 510 270"
+            stroke="url(#band-gradient)" stroke-width="32" fill="none"
+            stroke-linecap="round" filter="url(#soft-shadow)"/>
+      <!-- Sangle intérieure (cuir/silicone) -->
+      <path d="M 110 268 C 110 116, 490 116, 490 268"
+            stroke="url(#cup-rim)" stroke-width="14" fill="none"
+            stroke-linecap="round" opacity="0.85"/>
+      <!-- Coupelle gauche -->
+      <g transform="translate(90,270)">
+        <ellipse cx="0" cy="0" rx="86" ry="100" fill="url(#cup-gradient)" filter="url(#soft-shadow)"/>
+        <ellipse cx="0" cy="0" rx="78" ry="94" fill="none" stroke="url(#cup-rim)" stroke-width="2" opacity="0.6"/>
+        <ellipse cx="0" cy="0" rx="56" ry="72" fill="url(#cushion-gradient)"/>
+        <ellipse cx="0" cy="0" rx="40" ry="56" fill="#0a0612" opacity="0.85"/>
+        <!-- micro logo -->
+        <circle cx="-30" cy="0" r="3" fill="var(--led-color, #c9b8ff)" opacity="0.85"/>
+      </g>
+      <!-- Coupelle droite -->
+      <g transform="translate(510,270)">
+        <ellipse cx="0" cy="0" rx="86" ry="100" fill="url(#cup-gradient)" filter="url(#soft-shadow)"/>
+        <ellipse cx="0" cy="0" rx="78" ry="94" fill="none" stroke="url(#cup-rim)" stroke-width="2" opacity="0.6"/>
+        <ellipse cx="0" cy="0" rx="56" ry="72" fill="url(#cushion-gradient)"/>
+        <ellipse cx="0" cy="0" rx="40" ry="56" fill="#0a0612" opacity="0.85"/>
+        <!-- bouton de commande -->
+        <circle cx="40" cy="-8" r="6" fill="url(#cup-rim)"/>
+        <circle cx="40" cy="-8" r="2" fill="#fff" opacity="0.6"/>
+      </g>
+      <!-- Reflets -->
+      <ellipse cx="60" cy="240" rx="14" ry="36" fill="#fff" opacity="0.07"/>
+      <ellipse cx="540" cy="240" rx="14" ry="36" fill="#fff" opacity="0.07"/>
+    </symbol>
+
+    <!-- Pictos features -->
+    <symbol id="ic-anc" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="14" fill="none" stroke="currentColor" stroke-width="1.6" opacity="0.45"/>
+      <circle cx="20" cy="20" r="9" fill="none" stroke="currentColor" stroke-width="1.6" opacity="0.7"/>
+      <circle cx="20" cy="20" r="4" fill="currentColor"/>
+      <path d="M5 20 h6 M29 20 h6 M20 5 v6 M20 29 v6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity="0.6"/>
+    </symbol>
+    <symbol id="ic-spatial" viewBox="0 0 40 40">
+      <ellipse cx="20" cy="20" rx="15" ry="6" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <ellipse cx="20" cy="20" rx="6" ry="15" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="20" cy="20" r="2.5" fill="currentColor"/>
+    </symbol>
+    <symbol id="ic-battery" viewBox="0 0 40 40">
+      <rect x="6" y="13" width="26" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <rect x="32" y="17" width="3" height="6" rx="1" fill="currentColor"/>
+      <rect x="9" y="16" width="14" height="8" rx="1" fill="currentColor" opacity="0.85"/>
+    </symbol>
+    <symbol id="ic-chip" viewBox="0 0 40 40">
+      <rect x="11" y="11" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <rect x="15" y="15" width="10" height="10" rx="1" fill="currentColor" opacity="0.5"/>
+      <path d="M14 6 v3 M20 6 v3 M26 6 v3 M14 31 v3 M20 31 v3 M26 31 v3 M6 14 h3 M6 20 h3 M6 26 h3 M31 14 h3 M31 20 h3 M31 26 h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="ic-mic" viewBox="0 0 40 40">
+      <rect x="16" y="6" width="8" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M11 19 a9 9 0 0 0 18 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M20 28 v6 M14 34 h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="ic-feather" viewBox="0 0 40 40">
+      <path d="M9 31 L18 22 M9 31 c12 0 22-10 22-22 0 0-13 0-19 6 -3 3 -4 7 -4 11 z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      <path d="M14 26 h6 M18 22 h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ============================================================
+     NAV
+     ============================================================ -->
+<header class="nav" id="nav">
+  <a href="#hero" class="nav-brand">
+    <span class="nav-mark">
+      <svg viewBox="0 0 32 32" width="22" height="22"><use href="#headphones" transform="scale(0.05) translate(0 60)"/></svg>
+    </span>
+    <span class="nav-text">NIMBUS</span>
+  </a>
+  <nav class="nav-links">
+    <a href="#showcase">Casque</a>
+    <a href="#features">Technologie</a>
+    <a href="#configurator">Couleurs</a>
+    <a href="#specs">Spécifications</a>
+    <a href="#faq">FAQ</a>
+  </nav>
+  <div class="nav-actions">
+    <a href="/" class="nav-back" aria-label="Retour au portfolio">↩ Portfolio</a>
+    <a href="#pricing" class="nav-cta">Acheter <span aria-hidden="true">→</span></a>
+  </div>
+</header>
+
+<!-- ============================================================
+     HERO
+     ============================================================ -->
+<section class="hero" id="hero">
+  <div class="hero-bg" aria-hidden="true">
+    <div class="hero-glow hero-glow-1"></div>
+    <div class="hero-glow hero-glow-2"></div>
+    <div class="hero-glow hero-glow-3"></div>
+    <div class="hero-grid"></div>
+  </div>
+
+  <div class="hero-inner">
+    <span class="hero-eyebrow">
+      <span class="hero-eyebrow-dot"></span>
+      Nouveau · Édition Eclipse · Édition limitée
+    </span>
+
+    <h1 class="hero-title">
+      <span class="hero-line">Le silence,</span>
+      <span class="hero-line hero-line-italic">sculpté.</span>
+    </h1>
+
+    <p class="hero-tagline">
+      NIMBUS Pro réinvente l'écoute. Réduction de bruit adaptative, audio spatial
+      personnalisé et 60 heures d'autonomie — dans un châssis en aluminium sablé
+      de 274 grammes.
+    </p>
+
+    <div class="hero-cta">
+      <a href="#pricing" class="btn-primary">Commander · 599 €</a>
+      <a href="#showcase" class="btn-ghost">Découvrir <span aria-hidden="true">↓</span></a>
+    </div>
+
+    <div class="hero-stat-row" aria-label="Caractéristiques clés">
+      <div class="hero-stat"><strong>60h</strong><span>autonomie</span></div>
+      <div class="hero-stat"><strong>−42 dB</strong><span>ANC adaptatif</span></div>
+      <div class="hero-stat"><strong>274 g</strong><span>aluminium sablé</span></div>
+      <div class="hero-stat"><strong>10 mn</strong><span>= 8h d'écoute</span></div>
+    </div>
+  </div>
+
+  <div class="hero-product" aria-hidden="true">
+    <div class="hero-product-halo"></div>
+    <svg class="hero-product-svg" viewBox="0 0 600 540">
+      <use href="#headphones"/>
+    </svg>
+  </div>
+
+  <div class="hero-scroll-cue" aria-hidden="true">
+    <span>Scroll</span>
+    <svg width="14" height="20" viewBox="0 0 14 20"><path d="M2 8 L7 13 L12 8" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg>
+  </div>
+</section>
+
+<!-- ============================================================
+     MARQUEE
+     ============================================================ -->
+<section class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    <span>NIMBUS PRO · ANC ADAPTATIF · AUDIO SPATIAL HEAD-TRACKING · CHÂSSIS ALU SABLÉ · CUIR PROTÉINÉ · USB-C QUICK-CHARGE · BLUETOOTH 5.3 · CODEC LDAC + APTX LOSSLESS · </span>
+    <span>NIMBUS PRO · ANC ADAPTATIF · AUDIO SPATIAL HEAD-TRACKING · CHÂSSIS ALU SABLÉ · CUIR PROTÉINÉ · USB-C QUICK-CHARGE · BLUETOOTH 5.3 · CODEC LDAC + APTX LOSSLESS · </span>
+  </div>
+</section>
+
+<!-- ============================================================
+     SHOWCASE — sticky scroll
+     ============================================================ -->
+<section class="showcase" id="showcase">
+  <div class="showcase-side">
+    <div class="showcase-eyebrow">[ 01 / Showcase ]</div>
+    <h2 class="showcase-title">Une seule pièce<br>de métal usinée<br><em>au micron près.</em></h2>
+    <p class="showcase-lede">
+      Chaque coupelle NIMBUS est taillée dans un bloc d'aluminium 6063 puis
+      anodisée à la main. La structure interne — un châssis en titane de 0,8 mm —
+      isole le transducteur des vibrations parasites.
+    </p>
+  </div>
+
+  <div class="showcase-stage" id="showcaseStage">
+    <div class="showcase-product">
+      <svg class="showcase-svg" viewBox="0 0 600 540" id="showcaseSvg">
+        <use href="#headphones"/>
+      </svg>
+      <div class="showcase-callouts">
+        <div class="callout callout-1"><span class="callout-pulse"></span><span class="callout-line"></span><div class="callout-card">Châssis aluminium 6063 anodisé</div></div>
+        <div class="callout callout-2"><span class="callout-pulse"></span><span class="callout-line"></span><div class="callout-card">Coussinets cuir protéiné · mousse mémoire</div></div>
+        <div class="callout callout-3"><span class="callout-pulse"></span><span class="callout-line"></span><div class="callout-card">Couronne digitale haptique</div></div>
+        <div class="callout callout-4"><span class="callout-pulse"></span><span class="callout-line"></span><div class="callout-card">Transducteur planaire 40 mm</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     FEATURES
+     ============================================================ -->
+<section class="features" id="features">
+  <header class="section-head">
+    <div class="section-eyebrow">[ 02 / Technologie ]</div>
+    <h2 class="section-title">Pensé pour l'écoute<br><em>profonde.</em></h2>
+    <p class="section-lede">
+      Une plateforme audio entièrement nouvelle. Six puces dédiées orchestrent
+      le silence, le son et la spatialisation en moins de 1,5 ms.
+    </p>
+  </header>
+
+  <div class="feature-grid">
+    <article class="feature-card">
+      <div class="feature-icon"><svg width="40" height="40"><use href="#ic-anc"/></svg></div>
+      <h3>ANC Adaptatif</h3>
+      <p>Quatre microphones et un capteur barométrique recalibrent la réduction
+        de bruit 48 000 fois par seconde. Jusqu'à <strong>−42 dB</strong> sur les
+        fréquences basses.</p>
+      <span class="feature-badge">Capteur barométrique</span>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon"><svg width="40" height="40"><use href="#ic-spatial"/></svg></div>
+      <h3>Audio Spatial Head-Tracking</h3>
+      <p>Le scan de votre conduit auditif via l'app NIMBUS génère un profil
+        HRTF personnel. La scène sonore reste fixe quand vous tournez la tête.</p>
+      <span class="feature-badge">Profil HRTF perso</span>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon"><svg width="40" height="40"><use href="#ic-battery"/></svg></div>
+      <h3>60 heures d'autonomie</h3>
+      <p>Une batterie en cellules empilées de 1 200 mAh. <strong>10 minutes</strong>
+        de charge USB-C suffisent pour 8 heures d'écoute sans ANC.</p>
+      <span class="feature-badge">USB-C PD 3.1</span>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon"><svg width="40" height="40"><use href="#ic-chip"/></svg></div>
+      <h3>Puce N1 Audio</h3>
+      <p>Notre SoC custom 5 nm dédie six cœurs au DSP audio. Le traitement
+        psycho-acoustique tourne en local, sans aucune donnée envoyée au cloud.</p>
+      <span class="feature-badge">Tout en local</span>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon"><svg width="40" height="40"><use href="#ic-mic"/></svg></div>
+      <h3>Voix sans compromis</h3>
+      <p>Six microphones beam-formés isolent la voix dans le vent comme dans
+        une rue passante. Vous parlez naturellement, vos interlocuteurs vous
+        entendent <strong>distinctement.</strong></p>
+      <span class="feature-badge">Beam-forming 6 MEMS</span>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon"><svg width="40" height="40"><use href="#ic-feather"/></svg></div>
+      <h3>Confort durable</h3>
+      <p>274 grammes. Coussinets en cuir protéiné garantis 5 ans. Bandeau
+        articulé sur 14 axes pour épouser n'importe quelle tête.</p>
+      <span class="feature-badge">Garantie 5 ans</span>
+    </article>
+  </div>
+</section>
+
+<!-- ============================================================
+     QUOTE
+     ============================================================ -->
+<section class="quote-block">
+  <blockquote>
+    « Le casque audio le plus exigeant que nous ayons testé cette année.
+    Une fabrication digne d'une montre suisse. »
+  </blockquote>
+  <cite>— What Hi-Fi?, mars 2026 · <span>★★★★★</span></cite>
+</section>
+
+<!-- ============================================================
+     CONFIGURATOR
+     ============================================================ -->
+<section class="configurator" id="configurator">
+  <div class="config-grid">
+    <div class="config-stage">
+      <svg class="config-svg" id="configSvg" viewBox="0 0 600 540">
+        <use href="#headphones"/>
+      </svg>
+      <div class="config-shadow" aria-hidden="true"></div>
+    </div>
+
+    <div class="config-side">
+      <div class="section-eyebrow">[ 03 / Configurez ]</div>
+      <h2 class="section-title">Quatre teintes,<br><em>quatre humeurs.</em></h2>
+      <p class="section-lede">Anodisation à froid, finition mate. Chaque couleur
+        est appliquée à la main puis scellée par une couche de céramique
+        nanométrique.</p>
+
+      <div class="swatch-row" role="radiogroup" aria-label="Couleur du produit">
+        <button class="swatch is-active" data-color="eclipse"
+                style="--sw1:#5a4ddc;--sw2:#0d0825;"
+                role="radio" aria-checked="true">
+          <span class="swatch-disk"></span>
+          <span class="swatch-label">Eclipse</span>
+          <span class="swatch-hex">#5A4DDC → #0D0825</span>
+        </button>
+        <button class="swatch" data-color="sage"
+                style="--sw1:#a8c0a0;--sw2:#2a3a2a;"
+                role="radio" aria-checked="false">
+          <span class="swatch-disk"></span>
+          <span class="swatch-label">Sauge</span>
+          <span class="swatch-hex">#A8C0A0 → #2A3A2A</span>
+        </button>
+        <button class="swatch" data-color="linen"
+                style="--sw1:#e8dccb;--sw2:#7a6c54;"
+                role="radio" aria-checked="false">
+          <span class="swatch-disk"></span>
+          <span class="swatch-label">Linen</span>
+          <span class="swatch-hex">#E8DCCB → #7A6C54</span>
+        </button>
+        <button class="swatch" data-color="ember"
+                style="--sw1:#e87f4a;--sw2:#5a1f08;"
+                role="radio" aria-checked="false">
+          <span class="swatch-disk"></span>
+          <span class="swatch-label">Ember</span>
+          <span class="swatch-hex">#E87F4A → #5A1F08</span>
+        </button>
+      </div>
+
+      <div class="config-summary">
+        <div class="config-summary-row"><span>Modèle</span><strong>NIMBUS Pro</strong></div>
+        <div class="config-summary-row"><span>Finition</span><strong id="configFinish">Eclipse</strong></div>
+        <div class="config-summary-row"><span>Châssis</span><strong>Aluminium 6063 sablé</strong></div>
+        <div class="config-summary-row"><span>Livraison</span><strong>Offerte · 2-3 jours</strong></div>
+      </div>
+
+      <a href="#pricing" class="btn-primary">Continuer · 599 €</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     SPECS TABLE
+     ============================================================ -->
+<section class="specs" id="specs">
+  <header class="section-head">
+    <div class="section-eyebrow">[ 04 / Spécifications ]</div>
+    <h2 class="section-title">Le détail,<br><em>jusqu'au bout.</em></h2>
+  </header>
+
+  <div class="spec-table">
+    <div class="spec-block">
+      <h3>Audio</h3>
+      <dl>
+        <dt>Transducteur</dt><dd>Planaire magnétique 40 mm</dd>
+        <dt>Réponse</dt><dd>5 Hz – 40 kHz (±1 dB)</dd>
+        <dt>Codecs</dt><dd>LDAC · aptX Lossless · AAC · SBC</dd>
+        <dt>SPL max</dt><dd>108 dB / 100 Hz</dd>
+      </dl>
+    </div>
+
+    <div class="spec-block">
+      <h3>Réduction de bruit</h3>
+      <dl>
+        <dt>Mode actif</dt><dd>−42 dB · adaptatif 48 kHz</dd>
+        <dt>Microphones</dt><dd>6 MEMS beam-formés</dd>
+        <dt>Capteur</dt><dd>Barométrique sub-Pa</dd>
+        <dt>Latence</dt><dd>1,4 ms (boucle ANC)</dd>
+      </dl>
+    </div>
+
+    <div class="spec-block">
+      <h3>Sans-fil & batterie</h3>
+      <dl>
+        <dt>Bluetooth</dt><dd>5.3 · LE Audio · Multipoint</dd>
+        <dt>Autonomie</dt><dd>60 h · 40 h ANC ON</dd>
+        <dt>Charge rapide</dt><dd>10 min = 8 h d'écoute</dd>
+        <dt>Filaire</dt><dd>USB-C · jack 3,5 mm</dd>
+      </dl>
+    </div>
+
+    <div class="spec-block">
+      <h3>Construction</h3>
+      <dl>
+        <dt>Châssis</dt><dd>Aluminium 6063 sablé</dd>
+        <dt>Coussinets</dt><dd>Cuir protéiné · mousse mémoire</dd>
+        <dt>Poids</dt><dd>274 g</dd>
+        <dt>Pliage</dt><dd>14 axes · étui rigide inclus</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     PRICING
+     ============================================================ -->
+<section class="pricing" id="pricing">
+  <header class="section-head">
+    <div class="section-eyebrow">[ 05 / Acheter ]</div>
+    <h2 class="section-title">Une qualité.<br><em>Trois finitions.</em></h2>
+  </header>
+
+  <div class="price-grid">
+    <article class="price-card">
+      <div class="price-tag">NIMBUS</div>
+      <div class="price-amount">449<span class="price-currency">€</span></div>
+      <p class="price-tagline">Le casque NIMBUS classique. ANC, audio spatial, 50h d'autonomie.</p>
+      <ul class="price-feats">
+        <li>ANC −38 dB</li>
+        <li>50 heures d'autonomie</li>
+        <li>Cuir synthétique</li>
+        <li>Étui souple</li>
+      </ul>
+      <a href="#" class="btn-ghost btn-block">Choisir NIMBUS</a>
+    </article>
+
+    <article class="price-card price-card-featured">
+      <div class="price-flag">Le plus apprécié</div>
+      <div class="price-tag">NIMBUS Pro</div>
+      <div class="price-amount">599<span class="price-currency">€</span></div>
+      <p class="price-tagline">Toute la puissance audio NIMBUS, dans un châssis aluminium taillé à la main.</p>
+      <ul class="price-feats">
+        <li>ANC adaptatif −42 dB</li>
+        <li>60 heures d'autonomie</li>
+        <li>Cuir protéiné · 5 ans de garantie</li>
+        <li>Étui rigide</li>
+        <li>Audio spatial head-tracking</li>
+      </ul>
+      <a href="#" class="btn-primary btn-block">Choisir NIMBUS Pro</a>
+    </article>
+
+    <article class="price-card">
+      <div class="price-tag">NIMBUS Studio</div>
+      <div class="price-amount">899<span class="price-currency">€</span></div>
+      <p class="price-tagline">Pour les ingénieurs du son : DAC interne 32 bits, mode filaire bypass total.</p>
+      <ul class="price-feats">
+        <li>DAC ESS Sabre 32 bits</li>
+        <li>Câble OFC argenté inclus</li>
+        <li>Mode bypass analogique</li>
+        <li>Étui rigide en cuir</li>
+      </ul>
+      <a href="#" class="btn-ghost btn-block">Choisir NIMBUS Studio</a>
+    </article>
+  </div>
+
+  <p class="price-foot">
+    Livraison offerte · Retour gratuit 30 jours · Garantie 5 ans sur la batterie
+  </p>
+</section>
+
+<!-- ============================================================
+     FAQ
+     ============================================================ -->
+<section class="faq" id="faq">
+  <header class="section-head section-head-left">
+    <div class="section-eyebrow">[ 06 / FAQ ]</div>
+    <h2 class="section-title">Questions<br><em>fréquentes.</em></h2>
+  </header>
+
+  <ul class="faq-list">
+    <li class="faq-item">
+      <button class="faq-q">Le NIMBUS Pro est-il compatible avec mon iPhone / mon Mac ?</button>
+      <div class="faq-a">Oui. NIMBUS supporte tous les codecs sans compression majeurs (LDAC, aptX
+        Lossless, AAC). Sur Apple, l'audio spatial head-tracking se calibre via
+        l'app NIMBUS disponible sur l'App Store et Google Play.</div>
+    </li>
+    <li class="faq-item">
+      <button class="faq-q">Puis-je remplacer les coussinets ?</button>
+      <div class="faq-a">Bien sûr. Les coussinets sont fixés magnétiquement et se remplacent
+        en 5 secondes. Notre catalogue compte 9 finitions (cuir protéiné,
+        Alcantara, mesh tissé). Les nouveaux modèles sont garantis 2 ans.</div>
+    </li>
+    <li class="faq-item">
+      <button class="faq-q">Est-ce que mes données vocales sont envoyées dans le cloud ?</button>
+      <div class="faq-a">Non. La puce N1 traite intégralement les signaux ANC, le profil HRTF et
+        la suppression de bruit vocal en local. Aucune donnée audio ne quitte
+        l'appareil. Voir notre <a href="#">livre blanc sur la confidentialité</a>.</div>
+    </li>
+    <li class="faq-item">
+      <button class="faq-q">Quelle est la couverture de la garantie ?</button>
+      <div class="faq-a">5 ans sur la batterie, 5 ans sur le châssis et la sangle, 2 ans sur les
+        coussinets. La garantie couvre les défauts d'usine. Une assurance casse
+        accidentelle (NIMBUS Care) est proposée à 79 €/an.</div>
+    </li>
+    <li class="faq-item">
+      <button class="faq-q">Quand puis-je espérer recevoir mon NIMBUS Pro ?</button>
+      <div class="faq-a">Les commandes passées avant 17h en semaine sont expédiées le jour même.
+        La livraison standard est offerte (2-3 jours ouvrés en France
+        métropolitaine). Une livraison express est disponible pour 14 €.</div>
+    </li>
+    <li class="faq-item">
+      <button class="faq-q">Et si je ne suis pas satisfait ?</button>
+      <div class="faq-a">Vous disposez de 30 jours pour retourner votre NIMBUS sans avoir à vous
+        justifier. Le retour est offert. Le remboursement est effectué sous
+        7 jours après réception.</div>
+    </li>
+  </ul>
+</section>
+
+<!-- ============================================================
+     FOOTER / NEWSLETTER
+     ============================================================ -->
+<footer class="footer">
+  <div class="footer-band">
+    <div class="footer-newsletter">
+      <h3>Restez à l'écoute.</h3>
+      <p>Recevez les sorties, les éditions limitées et les firmwares en avant-première.
+        Pas de spam, pas de tracker. Désinscription en un clic.</p>
+      <form class="newsletter-form" onsubmit="event.preventDefault(); this.querySelector('button').textContent='Inscrit ✓'; this.querySelector('button').disabled=true;">
+        <input type="email" required placeholder="vous@domaine.com" aria-label="Adresse e-mail">
+        <button type="submit">S'inscrire <span aria-hidden="true">→</span></button>
+      </form>
+    </div>
+
+    <div class="footer-cols">
+      <div>
+        <h4>Produits</h4>
+        <a href="#">NIMBUS</a><a href="#">NIMBUS Pro</a><a href="#">NIMBUS Studio</a><a href="#">Accessoires</a>
+      </div>
+      <div>
+        <h4>Support</h4>
+        <a href="#">Aide</a><a href="#">Garantie</a><a href="#">NIMBUS Care</a><a href="#">Manuel</a>
+      </div>
+      <div>
+        <h4>Société</h4>
+        <a href="#">À propos</a><a href="#">Presse</a><a href="#">Carrières</a><a href="#">Contact</a>
+      </div>
+      <div>
+        <h4>Légal</h4>
+        <a href="#">Confidentialité</a><a href="#">CGV</a><a href="#">Mentions légales</a><a href="#">Cookies</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-base">
+    <span class="footer-mark">NIMBUS · Conçu en France · Assemblé au Portugal</span>
+    <span class="footer-copy">© 2026 NIMBUS Audio · Démo portfolio Antoine Binet</span>
+    <a class="footer-back" href="/">↩ Retour au portfolio</a>
+  </div>
+</footer>
+
+<script src="/nimbus/static/app.js?v=1"></script>
+
+</body>
+</html>
