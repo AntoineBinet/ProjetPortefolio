@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import Icon from '../components/Icon';
-import { useContent } from '../admin/AdminContext';
+import { useContent, useAdmin } from '../admin/AdminContext';
 import { Editable, EditableImage } from '../admin/Editable';
+import { ListControls } from '../admin/AdminToolbar';
 import sectorAuto from '../assets/sector-auto.png';
 import sectorAero from '../assets/sector-aero.png';
 import sectorEnergie from '../assets/sector-energie.jpg';
@@ -16,8 +17,13 @@ const sectorPhoto = {
   sante: sectorSante,
 };
 
+const interventionTemplate = () => ({ icon: 'compass', title: 'Nouvelle phase', text: 'Description de la phase.' });
+const metierTemplate = () => ({ icon: 'cpu', name: 'Nouveau métier', description: 'Description du métier.', examples: ['Exemple 1'] });
+const secteurTemplate = () => ({ key: `secteur-${Date.now()}`, label: 'Secteur', tagline: 'Description du secteur.' });
+
 export default function Activites() {
   const c = useContent();
+  const { setField } = useAdmin();
   const sectors = c.secteurs || [];
   const sectorContent = c.sectorContent || {};
   const metiers = c.metiers || [];
@@ -47,8 +53,10 @@ export default function Activites() {
             <div className="a-int-num">{String(i + 1).padStart(2, '0')} / 0{intervention.length}</div>
             <Editable as="h3" path={`intervention.${i}.title`} />
             <Editable as="p" path={`intervention.${i}.text`} multiline />
+            <ListControls path="intervention" index={i} template={interventionTemplate} />
           </article>
         ))}
+        <div className="a-int-add"><ListControls path="intervention" template={interventionTemplate} /></div>
       </div>
 
       <div className="container">
@@ -120,7 +128,7 @@ export default function Activites() {
               <summary>
                 <span className="a-metier-card-icon"><Icon name={m.icon} size={18} stroke="#EF8827"/></span>
                 <span className="a-metier-card-num">{String(i + 1).padStart(2, '0')}</span>
-                <span className="a-metier-card-name">{m.name}</span>
+                <Editable as="span" className="a-metier-card-name" path={`metiers.${i}.name`} />
                 <span className="a-metier-card-chev" aria-hidden="true">+</span>
               </summary>
               <div className="a-metier-card-body">
@@ -130,12 +138,16 @@ export default function Activites() {
                     <li key={j}>
                       <span className="a-orbit-detail-bullet"/>
                       <Editable path={`metiers.${i}.examples.${j}`} />
+                      <ListControls path={`metiers.${i}.examples`} index={j} template={() => 'Nouvel exemple'} />
                     </li>
                   ))}
+                  <li><ListControls path={`metiers.${i}.examples`} template={() => 'Nouvel exemple'} /></li>
                 </ul>
+                <div className="a-metier-card-foot"><ListControls path="metiers" index={i} template={metierTemplate} /></div>
               </div>
             </details>
           ))}
+          <div className="a-metier-add"><ListControls path="metiers" template={metierTemplate} /></div>
         </div>
       </div>
 
@@ -146,12 +158,16 @@ export default function Activites() {
             <Editable as="h3" className="a-split-title" path="activitesIntro.splitTitleHtml" html />
             <div className="a-tabs">
               {sectors.map((s, i) => (
-                <button key={`${s.key}-${i}`} className={`a-tab ${i === active ? 'active' : ''}`} onClick={() => setActive(i)}>
-                  <span className="a-tab-num">{String(i + 1).padStart(2, '0')}</span>
-                  <span className="a-tab-label">{s.label}</span>
-                  <span className="a-tab-line"/>
-                </button>
+                <div key={`${s.key}-${i}`} className="a-tab-wrap">
+                  <button className={`a-tab ${i === active ? 'active' : ''}`} onClick={() => setActive(i)}>
+                    <span className="a-tab-num">{String(i + 1).padStart(2, '0')}</span>
+                    <Editable as="span" className="a-tab-label" path={`secteurs.${i}.label`} />
+                    <span className="a-tab-line"/>
+                  </button>
+                  <ListControls path="secteurs" index={i} template={secteurTemplate} />
+                </div>
               ))}
+              <ListControls path="secteurs" template={secteurTemplate} />
             </div>
             <Editable as="p" className="a-split-tagline" path={`secteurs.${active}.tagline`} />
           </aside>
@@ -182,8 +198,10 @@ export default function Activites() {
                     <li key={i} style={{ '--d': `${i * 0.06}s` }}>
                       <span className="a-bullet"/>
                       <Editable path={`sectorContent.${currentSector.key}.products.${i}`} />
+                      <ListControls path={`sectorContent.${currentSector.key}.products`} index={i} template={() => 'Nouveau produit'} />
                     </li>
                   ))}
+                  <li><ListControls path={`sectorContent.${currentSector.key}.products`} template={() => 'Nouveau produit'} /></li>
                 </ul>
               </div>
               <div>
@@ -193,8 +211,10 @@ export default function Activites() {
                     <li key={i} style={{ '--d': `${i * 0.06}s` }}>
                       <span className="a-bullet a-bullet-fill"/>
                       <Editable path={`sectorContent.${currentSector.key}.activities.${i}`} />
+                      <ListControls path={`sectorContent.${currentSector.key}.activities`} index={i} template={() => 'Nouvelle activité'} />
                     </li>
                   ))}
+                  <li><ListControls path={`sectorContent.${currentSector.key}.activities`} template={() => 'Nouvelle activité'} /></li>
                 </ul>
               </div>
             </div>

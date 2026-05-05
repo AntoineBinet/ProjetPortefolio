@@ -278,11 +278,27 @@
   filter: brightness(0.55) saturate(0.85);
   transition: filter .3s ease;
 }
-.a-vis-bg { position: absolute; inset: 0; background:
+.a-vis-bg {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background:
   radial-gradient(circle at 20% 30%, rgba(239,136,39,0.32), transparent 55%),
   radial-gradient(circle at 80% 70%, rgba(17,32,42,0.4), transparent 60%),
   linear-gradient(180deg, rgba(13,19,24,0.1), rgba(13,19,24,0.55));
 }
+/* En mode édition : ramène la luminosité de la photo à 100 % et garde l'overlay
+   décoratif au-dessus mais transparent aux clics, pour que la zone cliquable
+   d'EditableImage couvre toute la vignette. */
+body[data-edit-mode="on"] .a-vis-photo {
+  filter: brightness(1) saturate(1);
+}
+body[data-edit-mode="on"] .a-vis-bg {
+  background:
+    radial-gradient(circle at 20% 30%, rgba(239,136,39,0.18), transparent 55%),
+    linear-gradient(180deg, rgba(13,19,24,0), rgba(13,19,24,0.20));
+}
+body[data-edit-mode="on"] .a-vis-kpi,
+body[data-edit-mode="on"] .a-vis-mono { pointer-events: none; }
 .a-vis-kpi { position: relative; text-align: center; }
 .a-vis-num { display: block; font-size: 120px; font-weight: 700; color: #fff; letter-spacing: -0.04em; line-height: 1; }
 .a-vis-num-label { display: block; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--orange); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 12px; }

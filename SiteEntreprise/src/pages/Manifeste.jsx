@@ -1,6 +1,9 @@
 import Icon from '../components/Icon';
 import { useContent } from '../admin/AdminContext';
-import { Editable } from '../admin/Editable';
+import { Editable, NavGuardLink } from '../admin/Editable';
+import { ListControls } from '../admin/AdminToolbar';
+
+const whyUpTemplate = () => ({ icon: 'flag', title: 'Nouvelle conviction', text: 'Description de la conviction.' });
 
 export default function Manifeste() {
   const c = useContent();
@@ -23,12 +26,12 @@ export default function Manifeste() {
           <Editable as="div" className="kicker" path="manifeste.kicker" />
           <Editable as="h2" className="display" path="manifeste.titleHtml" html />
           <div className="m-head-cta">
-            <a className="btn btn-primary" href="#carriere">
+            <NavGuardLink className="btn btn-primary" href="#carriere">
               <Editable path="manifeste.ctaPrimary" /> <Icon name="arrow" size={16}/>
-            </a>
-            <a className="btn btn-ghost" href={`mailto:${contact.email || ''}`}>
+            </NavGuardLink>
+            <NavGuardLink className="btn btn-ghost" href={`mailto:${contact.email || ''}`}>
               <Editable path="manifeste.ctaSecondary" />
-            </a>
+            </NavGuardLink>
           </div>
         </div>
       </div>
@@ -44,15 +47,17 @@ export default function Manifeste() {
                 <span className="m-card-tag">conviction · {String(i + 1).padStart(2, '0')}</span>
                 <Icon name="arrow" size={16} stroke="#EF8827"/>
               </div>
+              <ListControls path="whyUp" index={i} template={whyUpTemplate} />
             </article>
           ))}
           <div className="m-rail-end">
             <div>
               <div className="kicker">Suite →</div>
               <h3>Et après ?<br/>Voyons ce qu'on fait.</h3>
-              <a className="btn btn-primary" href="#activites">
+              <NavGuardLink className="btn btn-primary" href="#activites">
                 Activités <Icon name="arrow" size={16}/>
-              </a>
+              </NavGuardLink>
+              <ListControls path="whyUp" template={whyUpTemplate} />
             </div>
           </div>
         </div>

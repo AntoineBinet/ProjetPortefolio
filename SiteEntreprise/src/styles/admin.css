@@ -59,6 +59,43 @@
   font-style: italic;
 }
 
+/* Lien éditable : marque de présence + bouton "✎" qui ouvre un prompt URL */
+.ed-link {
+  position: relative;
+  outline: 1.5px dashed rgba(70, 119, 180, 0.5);
+  outline-offset: 3px;
+  border-radius: 3px;
+  transition: outline-color .12s, background .12s;
+}
+.ed-link:hover {
+  outline-color: rgba(70, 119, 180, 0.95);
+  background: rgba(70, 119, 180, 0.06);
+}
+.ed-link-edit {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 0;
+  background: #4677b4;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .14);
+  z-index: 5;
+  transition: transform .14s, box-shadow .14s;
+}
+.ed-link-edit:hover {
+  transform: scale(1.12);
+  box-shadow: 0 3px 10px rgba(70, 119, 180, .35);
+}
+
 /* Image éditable */
 .ed-img {
   position: relative;
@@ -321,14 +358,16 @@
   gap: 4px;
   margin-left: 8px;
   vertical-align: middle;
+  z-index: 6;
+  position: relative;
 }
 .admin-list-btn {
   width: 22px;
   height: 22px;
   border-radius: 50%;
   border: 1px solid rgba(239, 136, 39, 0.6);
-  background: rgba(239, 136, 39, 0.12);
-  color: #EF8827;
+  background: rgba(239, 136, 39, 0.92);
+  color: #fff;
   font-size: 0.9rem;
   font-weight: 700;
   line-height: 1;
@@ -338,20 +377,125 @@
   justify-content: center;
   padding: 0;
   font-family: inherit;
-  transition: background .12s, color .12s;
+  transition: transform .12s, box-shadow .12s, background .12s;
+  box-shadow: 0 2px 6px rgba(0,0,0,.18);
 }
 .admin-list-btn:hover {
-  background: #EF8827;
-  color: #fff;
+  background: #d97309;
+  transform: scale(1.08);
 }
 .admin-list-btn-danger {
   border-color: rgba(220, 38, 38, 0.6);
-  color: #dc2626;
-  background: rgba(220, 38, 38, 0.10);
+  color: #fff;
+  background: #dc2626;
 }
 .admin-list-btn-danger:hover {
-  background: #dc2626;
-  color: #fff;
+  background: #991b1b;
+}
+
+/* Place les contrôles en absolu sur les conteneurs de cartes pour qu'ils ne
+   décalent pas le layout en mode lecture (z-index > liens / images). */
+body[data-edit-mode="on"] .m-card,
+body[data-edit-mode="on"] .a-int-card,
+body[data-edit-mode="on"] .c-card,
+body[data-edit-mode="on"] .q-badge,
+body[data-edit-mode="on"] .n-card-wrap,
+body[data-edit-mode="on"] .n-feature-wrap,
+body[data-edit-mode="on"] .q-doc-row,
+body[data-edit-mode="on"] .g-row-wrap,
+body[data-edit-mode="on"] .a-tab-wrap,
+body[data-edit-mode="on"] .hero-stat-wrap {
+  position: relative;
+}
+body[data-edit-mode="on"] .m-card > .admin-list-controls,
+body[data-edit-mode="on"] .a-int-card > .admin-list-controls,
+body[data-edit-mode="on"] .c-card > .admin-list-controls,
+body[data-edit-mode="on"] .q-badge .admin-list-controls,
+body[data-edit-mode="on"] .n-card-wrap > .admin-list-controls,
+body[data-edit-mode="on"] .n-feature-wrap > .admin-list-controls,
+body[data-edit-mode="on"] .q-doc-row > .admin-list-controls,
+body[data-edit-mode="on"] .g-row-wrap > .admin-list-controls,
+body[data-edit-mode="on"] .a-tab-wrap > .admin-list-controls,
+body[data-edit-mode="on"] .hero-stat-wrap > .admin-list-controls {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 7;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 14px;
+  padding: 2px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.10);
+}
+
+/* Boutons "ajouter au bout" sans frame parent — toujours visibles */
+.a-int-add,
+.a-metier-add,
+.c-card-add,
+.g-row-add,
+.n-card-add-wrap,
+.q-badge-add-wrap,
+.hero-stat-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  min-height: 44px;
+  border: 1.5px dashed rgba(239, 136, 39, 0.3);
+  border-radius: 8px;
+  margin-top: 12px;
+}
+
+/* En mode édition, on force l'affichage des grilles mobiles qui portent les
+   contrôles add/remove (orbit métiers, etc.) — l'utilisateur voit donc à la
+   fois la version "spectateur" et les cartes éditables en dessous. */
+body[data-edit-mode="on"] .a-metiers-grid {
+  display: block;
+  padding: 0 24px;
+  margin: 0 0 60px;
+}
+
+/* Panneau admin : liste des mots rotatifs du Hero (cachés en lecture) */
+.hero-words-edit { display: none; }
+body[data-edit-mode="on"] .hero-words-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  margin: -16px 0 24px;
+  padding: 10px 14px;
+  background: rgba(239, 136, 39, 0.08);
+  border: 1px dashed rgba(239, 136, 39, 0.4);
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  color: #11202A;
+}
+.hero-words-edit-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: #b35a08;
+  margin-right: 4px;
+}
+.hero-words-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: #fff;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 32, 42, 0.10);
+}
+
+/* En mode lecture, on cache complètement ces conteneurs "ajouter" */
+body:not([data-edit-mode="on"]) .a-int-add,
+body:not([data-edit-mode="on"]) .a-metier-add,
+body:not([data-edit-mode="on"]) .c-card-add,
+body:not([data-edit-mode="on"]) .g-row-add,
+body:not([data-edit-mode="on"]) .n-card-add-wrap,
+body:not([data-edit-mode="on"]) .q-badge-add-wrap,
+body:not([data-edit-mode="on"]) .hero-stat-add {
+  display: none;
 }
 
 /* === Lock icon hint when admin === */
