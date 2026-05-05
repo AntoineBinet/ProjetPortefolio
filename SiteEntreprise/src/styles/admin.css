@@ -454,6 +454,53 @@ body[data-edit-mode="on"] .a-metiers-grid {
   margin: 0 0 60px;
 }
 
+/* Panneaux admin "edit-only" : marquees, tickers, hero-bg, etc. */
+.m-marquee-edit,
+.q-ticker-edit,
+.c-hero-bg-edit { display: none; }
+body[data-edit-mode="on"] .m-marquee-edit,
+body[data-edit-mode="on"] .q-ticker-edit,
+body[data-edit-mode="on"] .c-hero-bg-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  margin: 12px auto;
+  padding: 10px 14px;
+  background: rgba(239, 136, 39, 0.08);
+  border: 1px dashed rgba(239, 136, 39, 0.4);
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  color: #11202A;
+  position: relative;
+  z-index: 5;
+}
+.m-marquee-edit-label,
+.q-ticker-edit-label,
+.c-hero-bg-edit-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: #b35a08;
+}
+.m-marquee-edit-input,
+.q-ticker-edit-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 4px 10px;
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid rgba(17, 32, 42, 0.10);
+  font-family: 'JetBrains Mono', monospace;
+}
+.c-hero-bg-edit-thumb {
+  width: 80px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
 /* Panneau admin : liste des mots rotatifs du Hero (cachés en lecture) */
 .hero-words-edit { display: none; }
 body[data-edit-mode="on"] .hero-words-edit {
@@ -537,4 +584,92 @@ body:not([data-edit-mode="on"]) .hero-stat-add {
 /* Évite que la toolbar masque le footer */
 body:has(.admin-toolbar) {
   padding-bottom: 60px;
+}
+
+/* === IconPicker — choix d'icône via popover === */
+.icon-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+body[data-edit-mode="on"] .icon-picker {
+  outline: 1.5px dashed rgba(46, 122, 72, 0.55);
+  outline-offset: 4px;
+  border-radius: 4px;
+  transition: outline-color .12s, background .12s;
+}
+body[data-edit-mode="on"] .icon-picker:hover {
+  outline-color: rgba(46, 122, 72, 0.95);
+  background: rgba(46, 122, 72, 0.06);
+}
+.icon-picker-edit {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 0;
+  background: #2e7a48;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .14);
+  z-index: 6;
+  transition: transform .14s, box-shadow .14s;
+}
+.icon-picker-edit:hover {
+  transform: scale(1.12);
+  box-shadow: 0 3px 10px rgba(46, 122, 72, .35);
+}
+.icon-picker-popover {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 240px;
+  background: #fff;
+  border: 1px solid rgba(17, 32, 42, 0.12);
+  border-radius: 10px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+  padding: 10px;
+  z-index: 9000;
+  animation: icon-pop .14s ease-out;
+}
+@keyframes icon-pop {
+  from { opacity: 0; transform: translate(-50%, -4px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+.icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+}
+.icon-picker-tile {
+  width: 36px;
+  height: 36px;
+  border: 1px solid rgba(17, 32, 42, 0.10);
+  background: #fafafa;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: border-color .12s, background .12s, transform .12s;
+}
+.icon-picker-tile:hover {
+  border-color: #2e7a48;
+  background: rgba(46, 122, 72, 0.10);
+  transform: scale(1.05);
+}
+.icon-picker-tile.is-selected {
+  border-color: #2e7a48;
+  background: rgba(46, 122, 72, 0.16);
+  box-shadow: inset 0 0 0 1px #2e7a48;
 }

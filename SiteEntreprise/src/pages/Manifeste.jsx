@@ -1,4 +1,5 @@
 import Icon from '../components/Icon';
+import IconPicker from '../components/IconPicker';
 import { useContent } from '../admin/AdminContext';
 import { Editable, NavGuardLink } from '../admin/Editable';
 import { ListControls } from '../admin/AdminToolbar';
@@ -21,6 +22,11 @@ export default function Manifeste() {
           ))}
         </div>
       </div>
+      {/* Champ admin : éditer le texte du marquee défilant ci-dessus */}
+      <div className="m-marquee-edit container" aria-hidden="true">
+        <span className="m-marquee-edit-label">Marquee :</span>
+        <Editable as="span" className="m-marquee-edit-input" path="manifeste.marquee" />
+      </div>
       <div className="container">
         <div className="m-head">
           <Editable as="div" className="kicker" path="manifeste.kicker" />
@@ -40,7 +46,7 @@ export default function Manifeste() {
           {data.map((b, i) => (
             <article className="m-card" key={i} style={{ '--i': i }}>
               <div className="m-card-num">{String(i + 1).padStart(2, '0')}<span>/0{data.length}</span></div>
-              <div className="m-card-icon"><Icon name={b.icon} size={32} stroke="#EF8827"/></div>
+              <div className="m-card-icon"><IconPicker path={`whyUp.${i}.icon`} size={32} stroke="#EF8827"/></div>
               <Editable as="h3" path={`whyUp.${i}.title`} />
               <Editable as="p" path={`whyUp.${i}.text`} multiline />
               <div className="m-card-footer">

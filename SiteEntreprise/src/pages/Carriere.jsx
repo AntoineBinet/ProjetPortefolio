@@ -1,5 +1,5 @@
 import Icon from '../components/Icon';
-import { useContent } from '../admin/AdminContext';
+import { useContent, useEditable } from '../admin/AdminContext';
 import { Editable, EditableImage, NavGuardLink } from '../admin/Editable';
 import { ListControls } from '../admin/AdminToolbar';
 import followUpImg from '../assets/car-follow-up.jpg';
@@ -16,14 +16,23 @@ export default function Carriere() {
   const data = useContent();
   const c = data.carriere || {};
   const contact = data.contact || {};
+  const isEdit = useEditable();
+  const heroBgOverride = data?.imageOverrides?.carriere?.heroBg;
+  const heroBgUrl = heroBgOverride || followUpImg;
 
   return (
     <section className="c-section" id="carriere">
       <div
         className="c-hero-bg"
         aria-hidden="true"
-        style={{ backgroundImage: `url(${followUpImg})` }}
+        style={{ backgroundImage: `url(${heroBgUrl})` }}
       />
+      {isEdit && (
+        <div className="c-hero-bg-edit container">
+          <span className="c-hero-bg-edit-label">Image de fond Carrière :</span>
+          <EditableImage src={heroBgUrl} alt="Fond Carrière" path="carriere.heroBg" className="c-hero-bg-edit-thumb" />
+        </div>
+      )}
       <div className="c-bg" aria-hidden="true">
         <div className="c-bg-line"/>
         <div className="c-bg-line"/>
