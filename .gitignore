@@ -9,6 +9,7 @@ logs/
 *.log
 .env
 .portfolio_config.json
+.demandes_modifs.json
 .DS_Store
 Thumbs.db
 
