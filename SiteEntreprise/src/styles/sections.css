@@ -135,7 +135,7 @@
 .c-head .kicker { justify-content: center; }
 .c-mega { font-size: clamp(80px, 14vw, 220px); font-weight: 800; line-height: 0.92; letter-spacing: -0.04em; margin: 16px 0 24px; }
 .c-mega span { display: block; }
-.c-mega-up { color: var(--orange); font-style: italic; }
+.c-mega-up { color: var(--orange); font-style: italic; margin-top: 0.12em; }
 .c-mega-up sup { font-size: 0.5em; vertical-align: super; }
 .c-tag { font-size: 18px; color: rgba(255,255,255,0.7); margin: 0; }
 .c-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 80px; position: relative; z-index: 2; }
