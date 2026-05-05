@@ -7,6 +7,8 @@ de mise à jour Git via SSE (boutons MAJ / Rollback / Restart).
 from __future__ import annotations
 
 import datetime
+import hashlib
+import hmac
 import json
 import os
 import secrets
@@ -14,6 +16,8 @@ import subprocess
 import sys
 import threading
 import time
+from collections import defaultdict, deque
+from datetime import timedelta
 from functools import wraps
 from pathlib import Path
 
@@ -30,7 +34,7 @@ from flask import (
 )
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-APP_VERSION = "0.4.5"
+APP_VERSION = "1.0.0"
 APP_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORTFOLIO_PORT", "8001"))
 ADMIN_USER = os.environ.get("PORTFOLIO_USER", "admin")
@@ -52,6 +56,32 @@ def _save_config(data: dict) -> None:
     CONFIG_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+# ── Hashing & vérif mot de passe (PBKDF2-SHA256) ─────────────────
+# Le mdp admin Portfolio n'est jamais stocké en clair sur disque.
+# Format : "pbkdf2_sha256$<iters>$<salt_hex>$<hash_hex>"
+
+def _hash_password(password: str, iters: int = 200_000) -> str:
+    salt = secrets.token_bytes(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iters)
+    return f"pbkdf2_sha256${iters}${salt.hex()}${dk.hex()}"
+
+
+def _verify_password(password: str, stored: str) -> bool:
+    if not stored or not isinstance(stored, str) or "$" not in stored:
+        return False
+    try:
+        algo, iters_s, salt_hex, dk_hex = stored.split("$", 3)
+        if algo != "pbkdf2_sha256":
+            return False
+        salt = bytes.fromhex(salt_hex)
+        dk = hashlib.pbkdf2_hmac(
+            "sha256", password.encode("utf-8"), salt, int(iters_s)
+        )
+        return hmac.compare_digest(dk.hex(), dk_hex)
+    except Exception:
+        return False
+
+
 def _load_demandes() -> list:
     try:
         data = json.loads(DEMANDES_FILE.read_text(encoding="utf-8"))
@@ -71,10 +101,49 @@ def _now_iso() -> str:
 
 
 _local_cfg = _load_config()
-if _local_cfg.get("admin_pass"):
-    ADMIN_PASS = _local_cfg["admin_pass"]
 if _local_cfg.get("admin_user"):
     ADMIN_USER = _local_cfg["admin_user"]
+
+# ── Migration douce du mdp admin Portfolio ──────────────────────
+# Si la config contient un `admin_pass` en clair (ancienne installation),
+# on le hash automatiquement et on remplace par `admin_pass_hash`. Le clair
+# n'est plus jamais conservé sur disque. Si seul `admin_pass_hash` est
+# présent, on l'utilise directement.
+_clear_pass = _local_cfg.pop("admin_pass", None)
+if _clear_pass and not _local_cfg.get("admin_pass_hash"):
+    _local_cfg["admin_pass_hash"] = _hash_password(_clear_pass)
+    try:
+        _save_config(_local_cfg)
+    except Exception:
+        pass
+
+ADMIN_PASS_HASH = _local_cfg.get("admin_pass_hash") or ""
+# Si l'env force un mdp et qu'aucun hash n'est encore stocké, on le hash.
+_env_pass = os.environ.get("PORTFOLIO_PASS")
+if _env_pass and _env_pass != "admin" and not ADMIN_PASS_HASH:
+    ADMIN_PASS_HASH = _hash_password(_env_pass)
+    _local_cfg["admin_pass_hash"] = ADMIN_PASS_HASH
+    try:
+        _save_config(_local_cfg)
+    except Exception:
+        pass
+
+# Fallback ultime : si rien n'est défini, on conserve la valeur de ADMIN_PASS
+# (env var ou défaut "admin") pour comparaison directe — utile au premier
+# démarrage avant que l'admin n'ait défini son mot de passe.
+_LEGACY_FALLBACK = ADMIN_PASS if not ADMIN_PASS_HASH else None
+
+
+def _check_admin_password(password: str) -> bool:
+    """Vérifie un mot de passe admin contre le hash (ou le fallback)."""
+    if ADMIN_PASS_HASH:
+        return _verify_password(password, ADMIN_PASS_HASH)
+    if _LEGACY_FALLBACK is not None:
+        return hmac.compare_digest(
+            password.encode("utf-8"), _LEGACY_FALLBACK.encode("utf-8")
+        )
+    return False
+
 
 # Persist a stable Flask secret_key across restarts so that /maj (which
 # triggers a process restart) doesn't invalidate every session cookie. Order:
@@ -87,6 +156,49 @@ if not SECRET_KEY:
         _save_config(_local_cfg)
     except Exception:
         pass
+
+
+# ── Rate limiting in-memory (anti brute-force login) ─────────────
+# Garde une fenêtre glissante de tentatives ratées par IP. Pas besoin
+# d'une DB : c'est local au process et survit jusqu'au restart (~suffisant
+# pour bloquer un attaquant naïf, le restart 10s du /maj ne pose pas de
+# souci en pratique).
+_LOGIN_FAILURES: dict[str, deque] = defaultdict(lambda: deque(maxlen=20))
+_LOGIN_LOCK = threading.Lock()
+_RATE_LIMIT_WINDOW = 900   # 15 minutes
+_RATE_LIMIT_MAX = 5        # 5 essais par fenêtre
+
+
+def _client_ip_for_rate() -> str:
+    return (
+        request.headers.get("X-Forwarded-For", "").split(",")[0].strip()
+        or request.remote_addr
+        or "unknown"
+    )[:64]
+
+
+def _is_rate_limited(ip: str) -> tuple[bool, int]:
+    """Renvoie (is_limited, retry_after_seconds)."""
+    now = time.time()
+    with _LOGIN_LOCK:
+        attempts = _LOGIN_FAILURES[ip]
+        # Évacue les essais hors fenêtre
+        while attempts and attempts[0] < now - _RATE_LIMIT_WINDOW:
+            attempts.popleft()
+        if len(attempts) >= _RATE_LIMIT_MAX:
+            retry_in = int(_RATE_LIMIT_WINDOW - (now - attempts[0]))
+            return True, max(1, retry_in)
+    return False, 0
+
+
+def _record_failure(ip: str) -> None:
+    with _LOGIN_LOCK:
+        _LOGIN_FAILURES[ip].append(time.time())
+
+
+def _reset_failures(ip: str) -> None:
+    with _LOGIN_LOCK:
+        _LOGIN_FAILURES.pop(ip, None)
 
 STUDIO_NAME = os.environ.get("PORTFOLIO_NAME", "Antoine Binet")
 STUDIO_TAGLINE = os.environ.get(
@@ -106,14 +218,65 @@ app.secret_key = SECRET_KEY
 # https:// instead of http://, fixing the _require_same_origin() check.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
+# ── Cookies session durcis ───────────────────────────────────────
+# En prod (servi par waitress derrière le tunnel Cloudflare HTTPS), on force
+# Secure=True pour que le cookie ne fuite jamais sur HTTP. En dev local
+# (`python app.py` sans `--prod`), Secure=False pour que le cookie soit
+# accepté par le navigateur sur http://localhost.
+_IS_PROD = ("--prod" in sys.argv) or (os.environ.get("PORTFOLIO_LAUNCHER") == "BAT")
+app.config.update(
+    SESSION_COOKIE_SECURE=_IS_PROD,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+)
+
+
+# ── Headers de sécurité HTTP globaux ─────────────────────────────
+# CSP volontairement permissive (unsafe-inline pour le JS inline des
+# templates, fonts.googleapis.com pour Space Grotesk). frame-src 'self'
+# autorise l'iframe des sous-apps depuis la landing. frame-ancestors 'self'
+# remplace X-Frame-Options.
+_CSP = "; ".join([
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: blob:",
+    "frame-src 'self'",
+    "frame-ancestors 'self'",
+    "connect-src 'self'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "object-src 'none'",
+])
+
 
 @app.after_request
-def _no_cache_html(resp):
+def _security_headers(resp):
+    # No-cache pour le HTML (déjà fait avant la consolidation).
     ct = (resp.headers.get("Content-Type") or "").lower()
     if ct.startswith("text/html"):
         resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         resp.headers["Pragma"] = "no-cache"
         resp.headers["Expires"] = "0"
+    # Headers de sécurité globaux (poses idempotentes).
+    resp.headers.setdefault("Content-Security-Policy", _CSP)
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    resp.headers.setdefault(
+        "Permissions-Policy",
+        "geolocation=(), camera=(), microphone=(), payment=(), usb=()",
+    )
+    # HSTS : on est toujours derrière Cloudflare HTTPS en prod. 1 an. Le
+    # tunnel cloudflared ne pose pas systématiquement X-Forwarded-Proto, donc
+    # on s'appuie sur le flag --prod (waitress) plutôt que sur la requête.
+    if _IS_PROD:
+        resp.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains",
+        )
     return resp
 
 
@@ -182,12 +345,38 @@ def apps_page():
 def login():
     error = None
     if request.method == "POST":
+        ip = _client_ip_for_rate()
+        limited, retry_after = _is_rate_limited(ip)
+        if limited:
+            error = (
+                f"Trop de tentatives. Réessaie dans {retry_after // 60} min "
+                f"{retry_after % 60} s."
+            )
+            return render_template("login.html", error=error), 429
+
+        # CSRF basique : refuse les POST cross-origin.
+        chk = _require_same_origin()
+        if chk:
+            return render_template(
+                "login.html",
+                error="Origine non autorisée",
+            ), 403
+
         u = (request.form.get("username") or "").strip()
         p = (request.form.get("password") or "").strip()
-        if u == ADMIN_USER and p == ADMIN_PASS:
+        # Comparaison constante-temps pour éviter le timing attack sur l'user.
+        ok_user = hmac.compare_digest(u.encode("utf-8"),
+                                      ADMIN_USER.encode("utf-8"))
+        ok_pass = _check_admin_password(p)
+        if ok_user and ok_pass:
+            _reset_failures(ip)
+            # Régénère l'identifiant de session (anti session-fixation).
+            session.clear()
             session["user"] = u
             session.permanent = True
             return redirect(request.args.get("next") or url_for("admin_parametres"))
+        _record_failure(ip)
+        time.sleep(0.3)  # ralentit légèrement les essais
         error = "Identifiants invalides"
     return render_template("login.html", error=error)
 
@@ -344,6 +533,7 @@ def api_deploy_restart():
 
 
 @deploy_bp.post("/api/deploy/pull-from-404")
+@login_required
 def api_deploy_pull_from_404():
     chk = _require_same_origin()
     if chk:
@@ -373,6 +563,7 @@ def api_deploy_pull_from_404():
 
 
 @deploy_bp.post("/api/deploy/rollback")
+@login_required
 def api_deploy_rollback():
     chk = _require_same_origin()
     if chk:
@@ -403,6 +594,9 @@ def api_deploy_rollback():
 
 @deploy_bp.get("/api/deploy/health")
 def api_deploy_health():
+    """Réponse minimale pour les visiteurs (juste alive), détaillée pour l'admin."""
+    if not _logged_in():
+        return jsonify(ok=True, version=APP_VERSION)
     try:
         cur = _git("rev-parse", "HEAD", timeout=2).stdout.strip()[:7] or "unknown"
         last = APP_DIR / ".last_commit_hash"
@@ -421,17 +615,24 @@ def api_deploy_health():
 
 
 @deploy_bp.post("/api/deploy/change-password")
+@login_required
 def api_change_password():
-    if not _logged_in():
-        return jsonify(ok=False, error="Non autorisé — reconnecte-toi"), 401
+    chk = _require_same_origin()
+    if chk:
+        return chk
     data = request.get_json(silent=True) or {}
     new_pass = (data.get("password") or "").strip()
-    if len(new_pass) < 4:
-        return jsonify(ok=False, error="Mot de passe trop court (min 4 caractères)"), 400
-    global ADMIN_PASS
-    ADMIN_PASS = new_pass
+    if len(new_pass) < 8:
+        return jsonify(
+            ok=False,
+            error="Mot de passe trop court (min 8 caractères)",
+        ), 400
+    global ADMIN_PASS_HASH, _LEGACY_FALLBACK
+    ADMIN_PASS_HASH = _hash_password(new_pass)
+    _LEGACY_FALLBACK = None  # plus de fallback en clair après changement
     cfg = _load_config()
-    cfg["admin_pass"] = new_pass
+    cfg.pop("admin_pass", None)  # purge tout reste de mdp en clair
+    cfg["admin_pass_hash"] = ADMIN_PASS_HASH
     _save_config(cfg)
     return jsonify(ok=True, message="Mot de passe mis à jour")
 

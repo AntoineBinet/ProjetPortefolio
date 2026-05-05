@@ -19,3 +19,22 @@ mnwork.yml
 # Claude Code — permissions locales et log auto-push (déjà couvert par *.log mais explicite)
 .claude/settings.local.json
 .claude/auto-push.log
+
+# Bases SQLite + journals — contiennent des hashs de mdp, sessions, données
+# utilisateurs. Ne JAMAIS versionner.
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Sites Entreprise : mot de passe admin (hash) — local uniquement
+SiteEntreprise/admin_pass.json
+# Uploads CMS — fichiers utilisateurs, pas du code
+SiteEntreprise/uploads/
+
+# Logs de boot
+boot.log
+flask.out.log
+flask.err.log
+tunnel.out.log
+tunnel.err.log

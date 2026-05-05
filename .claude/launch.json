@@ -6,6 +6,15 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-X", "utf8", "app.py"],
       "port": 8001
+    },
+    {
+      "name": "Portfolio Flask Preview (port 8002)",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-X", "utf8", "app.py"],
+      "port": 8002,
+      "env": {
+        "PORTFOLIO_PORT": "8002"
+      }
     }
   ]
 }

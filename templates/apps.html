@@ -9,7 +9,7 @@
     <a href="{{ url_for('index') }}">Index</a>
     <a href="{{ url_for('apps_page') }}" class="is-active">Apps</a>
     <a href="{{ url_for('index') }}#about">À propos</a>
-    <a href="{{ url_for('index') }}#about">Contact</a>
+    <a href="mailto:{{ contact_email }}">Contact</a>
   </nav>
 </header>
 
@@ -39,7 +39,7 @@
         data-tags="{{ p.tags|join(' ')|lower }}"
         data-year="{{ p.year }}"
         data-type="{{ p.type }}">
-      <a href="{{ url_for('index') }}#project-{{ p.id }}" class="apps-link" style="--accent: {{ p.accent }};">
+      <a href="{{ p.demo or url_for('index') + '#project-' + p.id|string }}" class="apps-link" style="--accent: {{ p.accent }};">
         <span class="apps-num">{{ '%02d'|format(loop.index) }}</span>
         <span class="apps-swatch" aria-hidden="true"></span>
         <div class="apps-meta">
@@ -52,6 +52,7 @@
         <span class="apps-year">{{ p.year }}</span>
         <span class="apps-arrow" aria-hidden="true">↗</span>
       </a>
+      <a href="{{ url_for('index') }}#project-{{ p.id }}" class="apps-link-meta" aria-label="Voir la présentation de {{ p.name }} sur la landing">Présentation →</a>
     </li>
     {% endfor %}
   </ul>
@@ -62,14 +63,12 @@
 </main>
 
 <footer class="page-footer">
-  <div>© {{ current_year }} — {{ studio_name|upper }}</div>
+  <div>© {{ current_year }} — {{ studio_name|upper }} · v{{ app_version }}</div>
   <div class="page-footer-links">
     <a href="mailto:{{ contact_email }}">{{ contact_email|upper }}</a>
     <a href="{{ url_for('index') }}">RETOUR INDEX</a>
     {% if session.user %}
     <a href="{{ url_for('admin_parametres') }}">ADMIN</a>
-    {% else %}
-    <a href="{{ url_for('login') }}">ADMIN</a>
     {% endif %}
   </div>
 </footer>

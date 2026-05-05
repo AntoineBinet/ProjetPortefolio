@@ -7,31 +7,33 @@
   <div class="hero-eyebrow">Erreur · 404</div>
   <h1 class="error-title">Page introuvable.</h1>
   <p class="muted">
-    Cette URL n'existe pas. Si le serveur vient d'être mis à jour et que la page
-    a disparu, tu peux relancer une mise à jour pour réparer.
+    Cette URL n'existe pas. Reviens à l'accueil pour parcourir le studio.
   </p>
 
   <div class="error-actions">
     <a href="{{ url_for('index') }}" class="btn-primary">Retour à l'accueil</a>
-    <button id="btnRepair" class="btn-secondary">Réparer & redémarrer</button>
+    {% if session.user %}
+    <button id="btnRepair" class="btn-secondary">Réparer &amp; redémarrer</button>
+    {% endif %}
   </div>
 
+  {% if session.user %}
   <p class="muted small" id="repairStatus" aria-live="polite"></p>
+  <script>
+    document.getElementById('btnRepair').addEventListener('click', async () => {
+      if (!confirm("Pull origin/main + redémarrage du serveur ?")) return;
+      const status = document.getElementById('repairStatus');
+      status.textContent = "Mise à jour en cours…";
+      try {
+        const r = await fetch("/api/deploy/pull-from-404", { method: "POST" });
+        const d = await r.json();
+        status.textContent = d.ok ? d.message : ("Erreur : " + d.error);
+        if (d.ok) setTimeout(() => location.href = "/", 8000);
+      } catch (e) {
+        status.textContent = "Erreur réseau : " + e.message;
+      }
+    });
+  </script>
+  {% endif %}
 </main>
-
-<script>
-  document.getElementById('btnRepair').addEventListener('click', async () => {
-    if (!confirm("Pull origin/main + redémarrage du serveur ?")) return;
-    const status = document.getElementById('repairStatus');
-    status.textContent = "Mise à jour en cours…";
-    try {
-      const r = await fetch("/api/deploy/pull-from-404", { method: "POST" });
-      const d = await r.json();
-      status.textContent = d.ok ? d.message : ("Erreur : " + d.error);
-      if (d.ok) setTimeout(() => location.href = "/", 8000);
-    } catch (e) {
-      status.textContent = "Erreur réseau : " + e.message;
-    }
-  });
-</script>
 {% endblock %}

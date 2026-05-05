@@ -1,7 +1,11 @@
-# Portfolio — marienour.work
+# Portfolio — marienour.work (v1.0)
 
 Site Flask publié à **https://marienour.work** via un tunnel Cloudflare nommé `mnwork`.
 Une zone `/admin/*` (login admin) sert à piloter MAJ / Rollback / Restart depuis le navigateur.
+
+**Le site est conçu pour être partagé** : un visiteur qui reçoit un lien
+`/casino` ou `/site-entreprise` peut naviguer vers la landing mais n'a JAMAIS
+accès aux fonctions admin/édition. Voir la section *Sécurité & mode visiteur*.
 
 ## Le voisin Prospup — règle d'or
 
@@ -19,17 +23,52 @@ Pour identifier sans risque le process Portfolio : `netstat -ano | grep :8001`.
 ## Architecture
 
 - `app.py` — Flask app, port `8001` (env `PORTFOLIO_PORT`), version dans `APP_VERSION`
-  - Pages publiques : `/` (landing), `/apps`
-  - Auth : `/login`, `/logout`, sessions Flask
-  - Admin : `/admin/parametres` (protégé par `@login_required`)
-  - API SSE deploy : `/api/deploy/{pull,restart,rollback,health,remote,pull-from-404}`
-  - 404 custom avec mécanisme de réparation (`/api/deploy/pull-from-404`)
-- `templates/` — Jinja2 (landing, apps, login, base, 404, admin/parametres)
+  - Pages publiques : `/` (landing), `/apps`, `/casino`, `/site-entreprise`
+  - Auth Portfolio : `/login`, `/logout`, sessions Flask hashées PBKDF2
+  - Admin : `/admin/parametres`, `/admin/demandes-archivees` (`@login_required`)
+  - API deploy (toutes login + same-origin) : `/api/deploy/{pull,restart,rollback,health,remote,pull-from-404,change-password,prospup-status,launch-prospup}`
+  - 404 custom — bouton "Réparer & redémarrer" visible **uniquement pour les loggés**
+- `Casino/` — sous-app Texas Hold'em (auth séparée : cookie + DB SQLite + PBKDF2)
+- `SiteEntreprise/` — vitrine Up Technologies (Vite/React + mini-CMS, auth séparée)
+- `templates/` — Jinja2 (base, landing, apps, login, 404, admin/parametres, admin/demandes_archivees)
 - `static/` — CSS + JS (`landing.js`, `apps.js`, `style.css`)
 - `_run_serveur.bat` — boucle de relance : `python app.py --prod`, exit code 42 = restart
 - `PORTFOLIO.bat` — lance serveur (via `_run_serveur.bat`) **+** tunnel cloudflared
+- `boot_portfolio.ps1` — démarrage automatique au logon (tâche planifiée Windows)
 - `mnwork.yml` — config tunnel locale (gitignorée — chemin absolu user-spécifique)
 - `requirements.txt` — `flask>=3.0`, `waitress>=3.0`
+
+## Sécurité & mode visiteur (v1.0)
+
+Le site est public — un lien partagé doit pouvoir être ouvert par n'importe qui
+sans risque ni accidentel ni intentionnel. Mécanismes en place :
+
+- **Hash PBKDF2-SHA256 (200k itérations)** pour le mdp admin Portfolio. La
+  config tolère un ancien `admin_pass` en clair (migration auto au démarrage).
+  Min 8 caractères au changement.
+- **Rate limit /login** : 5 essais ratés / 15 min / IP. Réponse 429 ensuite.
+- **CSRF** : Origin/Referer requis sur tous les POST mutants
+  (Portfolio + Casino + SiteEntreprise) + cookies `SameSite=Lax`.
+- **Cookies session durcis** : `Secure` (en prod), `HttpOnly`, `SameSite=Lax`,
+  durée 30 jours. `session.clear()` avant élévation des droits (anti session-fixation).
+- **Headers HTTP de sécurité** : CSP (avec `frame-src 'self'` pour les iframes
+  des sous-apps), HSTS 1 an, X-Frame-Options SAMEORIGIN, X-Content-Type-Options,
+  Referrer-Policy, Permissions-Policy.
+- **Endpoints deploy protégés** : `pull-from-404`, `rollback`, `change-password`
+  passent tous par `@login_required`. `restart-internal` reste sans login mais
+  refuse tout client hors `127.0.0.1`.
+- **`/api/deploy/health`** : version uniquement pour les visiteurs, détails
+  (commit, rollback) pour les admins seulement.
+- **Auth séparée par sous-app** : Casino (cookie `casino_session` + DB) et
+  SiteEntreprise (`session["site_authed"]` + werkzeug hash) ont chacune leur
+  propre chemin. Aucune élévation croisée — un partage de `/site-entreprise`
+  ne donne **jamais** accès à `/admin/parametres`.
+- **Uploads SiteEntreprise** : `.svg` exclu (vecteur XSS persistant).
+
+Côté templates :
+- Footers landing/apps : lien `ADMIN` rendu **uniquement si `session.user`**.
+- 404 : bouton "Réparer & redémarrer" rendu **uniquement si `session.user`**
+  (visiteur ne voit que "Retour à l'accueil").
 
 ## Démarrage / arrêt
 
@@ -48,12 +87,14 @@ Mode prod = waitress (`--prod` flag), mode dev = `app.run(debug=True)` directeme
 | ------------------ | --------------------- | ---------------------------------- |
 | `PORTFOLIO_PORT`   | `8001`                | port d'écoute Flask                |
 | `PORTFOLIO_USER`   | `admin`               | login admin                        |
-| `PORTFOLIO_PASS`   | `admin`               | password admin                     |
+| `PORTFOLIO_PASS`   | `admin`               | password admin (hashé au boot)     |
 | `PORTFOLIO_SECRET` | random hex            | secret_key Flask (sessions)        |
 | `PORTFOLIO_NAME`   | `Antoine Binet`       | nom affiché                        |
 | `PORTFOLIO_TAGLINE`| —                     | tagline landing                    |
 | `PORTFOLIO_EMAIL`  | `hello@marienour.work`| contact                            |
 | `PORTFOLIO_LAUNCHER`| (vide)               | mis à `BAT` par `_run_serveur.bat` |
+| `CASINO_ADMIN_CHIPS`| `100000`             | chips initiales admin Casino       |
+| `PROSPUP_DIR`      | (vide)                | chemin Prospup pour `launch-prospup` |
 
 ## Git workflow
 

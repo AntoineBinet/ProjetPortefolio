@@ -50,8 +50,33 @@ _DIST = _HERE / "dist"
 _CONTENT_FILE = _HERE / "content.json"
 _UPLOADS_DIR = _HERE / "uploads"
 
-_ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"}
+# .svg volontairement exclu (XSS via balise <script> embarquée). Pour
+# afficher du SVG, l'admin doit le convertir en PNG/WebP côté navigateur.
+_ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 _MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # 8 MB
+
+
+def _require_same_origin():
+    """Refuse les POST/PATCH/DELETE cross-origin (CSRF basique)."""
+    origin = request.headers.get("Origin") or ""
+    referer = request.headers.get("Referer") or ""
+
+    def _strip_scheme(url: str) -> str:
+        for s in ("https://", "http://"):
+            if url.lower().startswith(s):
+                return url[len(s):]
+        return url
+
+    host = _strip_scheme(request.host_url.rstrip("/"))
+    if origin and not _strip_scheme(origin).startswith(host):
+        return jsonify(ok=False, error="Origine non autorisée"), 403
+    if not origin and referer and not _strip_scheme(referer).startswith(host):
+        return jsonify(ok=False, error="Referer non autorisé"), 403
+    if not origin and not referer:
+        # Pas de header → forcément hors browser (curl, etc.). On refuse les
+        # mutations en aveugle pour éviter les hits scriptés.
+        return jsonify(ok=False, error="Origin ou Referer requis"), 403
+    return None
 
 # Init store password au chargement (idempotent).
 site_db.init_db()
@@ -99,6 +124,9 @@ def api_get_content():
 def api_save_content_route():
     if not _is_admin():
         return jsonify(ok=False, error="Non autorisé"), 401
+    chk = _require_same_origin()
+    if chk:
+        return chk
     data = request.get_json(silent=True)
     if not isinstance(data, dict):
         return jsonify(ok=False, error="Format JSON invalide"), 400
@@ -115,10 +143,18 @@ def api_auth_me():
 
 @site_entreprise_bp.post("/api/auth/login")
 def api_auth_login():
+    chk = _require_same_origin()
+    if chk:
+        return chk
     body = request.get_json(silent=True) or {}
     pwd = body.get("password") or ""
     if not site_db.verify_password(pwd):
+        # Petite latence pour décourager le brute-force naïf.
+        import time as _t
+        _t.sleep(0.3)
         return jsonify(ok=False, error="Mot de passe incorrect"), 401
+    # Anti session-fixation : on régénère la session avant d'élever les droits.
+    session.pop("site_authed", None)
     session["site_authed"] = True
     session.permanent = True
     return jsonify(ok=True, **_auth_status())
@@ -134,6 +170,9 @@ def api_auth_logout():
 def api_auth_change_password():
     if not _is_admin():
         return jsonify(ok=False, error="Non autorisé"), 401
+    chk = _require_same_origin()
+    if chk:
+        return chk
     body = request.get_json(silent=True) or {}
     old = body.get("old_password") or ""
     new = body.get("new_password") or ""
@@ -152,6 +191,9 @@ def api_auth_change_password():
 def api_upload():
     if not _is_admin():
         return jsonify(ok=False, error="Non autorisé"), 401
+    chk = _require_same_origin()
+    if chk:
+        return chk
     f = request.files.get("file")
     if not f or not f.filename:
         return jsonify(ok=False, error="Aucun fichier"), 400
