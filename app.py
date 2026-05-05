@@ -56,6 +56,18 @@ if _local_cfg.get("admin_pass"):
 if _local_cfg.get("admin_user"):
     ADMIN_USER = _local_cfg["admin_user"]
 
+# Persist a stable Flask secret_key across restarts so that /maj (which
+# triggers a process restart) doesn't invalidate every session cookie. Order:
+# env var > value stored in .portfolio_config.json > fresh random (persisted).
+SECRET_KEY = os.environ.get("PORTFOLIO_SECRET") or _local_cfg.get("secret_key")
+if not SECRET_KEY:
+    SECRET_KEY = secrets.token_hex(32)
+    _local_cfg["secret_key"] = SECRET_KEY
+    try:
+        _save_config(_local_cfg)
+    except Exception:
+        pass
+
 STUDIO_NAME = os.environ.get("PORTFOLIO_NAME", "Antoine Binet")
 STUDIO_TAGLINE = os.environ.get(
     "PORTFOLIO_TAGLINE",
@@ -69,7 +81,7 @@ PROJECTS = [
 ]
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("PORTFOLIO_SECRET") or secrets.token_hex(32)
+app.secret_key = SECRET_KEY
 # Trust X-Forwarded-Proto from Cloudflare/nginx so request.host_url returns
 # https:// instead of http://, fixing the _require_same_origin() check.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
@@ -175,6 +187,7 @@ def login():
         p = (request.form.get("password") or "").strip()
         if u == ADMIN_USER and p == ADMIN_PASS:
             session["user"] = u
+            session.permanent = True
             return redirect(request.args.get("next") or url_for("admin_parametres"))
         error = "Identifiants invalides"
     return render_template("login.html", error=error)
