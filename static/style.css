@@ -446,7 +446,22 @@ code {
   color: var(--muted-3);
   letter-spacing: 0.04em;
 }
-.browser-body { position: relative; width: 100%; height: calc(100% - 36px); }
+.browser-body { position: relative; width: 100%; height: calc(100% - 36px); overflow: hidden; }
+
+.browser-preview {
+  position: absolute; inset: 0;
+  background: var(--paper);
+  pointer-events: none;
+}
+.browser-frame {
+  position: absolute; top: 0; left: 0;
+  width: 1600px; height: 952px;
+  border: 0;
+  transform: scale(0.55);
+  transform-origin: top left;
+  background: var(--paper);
+  pointer-events: none;
+}
 
 .mockup-stripes {
   position: absolute; inset: 0;
