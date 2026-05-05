@@ -180,4 +180,97 @@
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
     }[c]));
   }
+
+  // ── Zoom-to-open mockups ──────────────────────────────────────
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let zooming = false;
+
+  document.querySelectorAll('.mockup-link').forEach((mockup) => {
+    const demo = mockup.dataset.demo;
+    if (!demo) return;
+
+    const trigger = (e) => {
+      if (zooming) return;
+      e.preventDefault();
+      if (reducedMotion) { window.location.href = demo; return; }
+      zoomToOpen(mockup, demo);
+    };
+
+    mockup.addEventListener('click', trigger);
+    mockup.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') trigger(e);
+    });
+  });
+
+  function zoomToOpen(mockup, demoUrl) {
+    const inner = mockup.querySelector('.browser, .phone');
+    if (!inner) { window.location.href = demoUrl; return; }
+
+    zooming = true;
+    const rect = inner.getBoundingClientRect();
+    const naturalW = inner.offsetWidth;
+    const naturalH = inner.offsetHeight;
+    if (!naturalW || !naturalH) { window.location.href = demoUrl; return; }
+    const startScale = rect.width / naturalW;
+
+    // Backdrop (fades the page behind the clone).
+    const backdrop = document.createElement('div');
+    backdrop.className = 'zoom-backdrop';
+    document.body.appendChild(backdrop);
+
+    // Clone the browser/phone at its on-screen visual position.
+    const clone = inner.cloneNode(true);
+    clone.classList.add('zoom-clone');
+    clone.style.top = rect.top + 'px';
+    clone.style.left = rect.left + 'px';
+    clone.style.width = naturalW + 'px';
+    clone.style.height = naturalH + 'px';
+    clone.style.transform = 'scale(' + startScale + ')';
+
+    // Pause/skip the iframe while we animate (prevents reflow jank).
+    const cloneIframe = clone.querySelector('iframe.browser-frame');
+    if (cloneIframe) cloneIframe.removeAttribute('loading');
+
+    document.body.appendChild(clone);
+
+    mockup.style.visibility = 'hidden';
+    document.body.classList.add('is-zooming');
+
+    // Compute the end state: fill the viewport, centered, anchored top-left.
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const targetScale = Math.max(vw / naturalW, vh / naturalH) * 1.02;
+    const scaledW = naturalW * targetScale;
+    const scaledH = naturalH * targetScale;
+    const targetLeft = (vw - scaledW) / 2;
+    const targetTop = (vh - scaledH) / 2;
+
+    // Force layout, then animate on the next frame.
+    void clone.offsetWidth;
+
+    requestAnimationFrame(() => {
+      backdrop.classList.add('is-active');
+      clone.classList.add('is-final');
+      clone.style.transition =
+        'top 720ms cubic-bezier(0.65, 0, 0.3, 1),' +
+        'left 720ms cubic-bezier(0.65, 0, 0.3, 1),' +
+        'transform 720ms cubic-bezier(0.65, 0, 0.3, 1)';
+      clone.style.top = targetTop + 'px';
+      clone.style.left = targetLeft + 'px';
+      clone.style.transform = 'scale(' + targetScale + ')';
+    });
+
+    // Navigate just before the animation ends so the new page swaps in seamlessly.
+    setTimeout(() => { window.location.href = demoUrl; }, 660);
+
+    // Safety net: restore state if navigation is cancelled (e.g. fragment).
+    window.addEventListener('pageshow', (ev) => {
+      if (!ev.persisted) return;
+      backdrop.remove();
+      clone.remove();
+      mockup.style.visibility = '';
+      document.body.classList.remove('is-zooming');
+      zooming = false;
+    }, { once: true });
+  }
 })();
