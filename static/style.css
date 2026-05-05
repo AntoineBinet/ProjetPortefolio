@@ -1087,8 +1087,9 @@ body.is-zooming .scroll-cue {
 }
 .link-archives:hover { color: var(--fg); border-color: var(--fg); }
 
-/* ── Page 404 ───────────────────────────────────────────────────── */
-.page-404 {
+/* ── Pages d'erreur (404 / 500) ─────────────────────────────────── */
+.page-404,
+.page-500 {
   display: grid; place-items: center; min-height: 100vh;
   background: var(--bg);
   padding: 32px;

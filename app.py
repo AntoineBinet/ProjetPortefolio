@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import datetime
 import json
+import logging
 import os
 import secrets
 import subprocess
 import sys
 import threading
 import time
+import traceback
 from functools import wraps
 from pathlib import Path
 
@@ -105,6 +107,12 @@ app.secret_key = SECRET_KEY
 # Trust X-Forwarded-Proto from Cloudflare/nginx so request.host_url returns
 # https:// instead of http://, fixing the _require_same_origin() check.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+if not app.logger.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s %(message)s"))
+    app.logger.addHandler(_h)
+app.logger.setLevel(logging.INFO)
 
 
 @app.after_request
@@ -201,11 +209,15 @@ def logout():
 @app.route("/admin/parametres")
 @login_required
 def admin_parametres():
-    return render_template(
-        "admin/parametres.html",
-        app_dir=str(APP_DIR),
-        user=session.get("user"),
-    )
+    try:
+        return render_template(
+            "admin/parametres.html",
+            app_dir=str(APP_DIR),
+            user=session.get("user"),
+        )
+    except Exception:
+        app.logger.exception("admin_parametres render failed")
+        raise
 
 
 @app.route("/parametres")
@@ -704,6 +716,27 @@ app.register_blueprint(site_entreprise_bp)
 @app.errorhandler(404)
 def not_found(_e):
     return render_template("404.html"), 404
+
+
+@app.errorhandler(500)
+def internal_error(e):
+    error_id = secrets.token_hex(4)
+    app.logger.error("500 [%s] %s %s\n%s", error_id, request.method, request.path,
+                     "".join(traceback.format_exception(type(e), e, e.__traceback__)))
+    try:
+        return render_template("500.html", error_id=error_id), 500
+    except Exception:
+        return ("<h1>500 — erreur serveur</h1>"
+                f"<p>Référence : {error_id}</p>"
+                '<p><a href="/">Retour à l\'accueil</a></p>'), 500
+
+
+@app.errorhandler(Exception)
+def unhandled_exception(e):
+    from werkzeug.exceptions import HTTPException
+    if isinstance(e, HTTPException):
+        return e
+    return internal_error(e)
 
 
 if __name__ == "__main__":
