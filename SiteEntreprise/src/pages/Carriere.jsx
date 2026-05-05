@@ -1,10 +1,19 @@
 import Icon from '../components/Icon';
 import { UP_DATA } from '../data';
+import followUpImg from '../assets/car-follow-up.jpg';
+import careerAheadImg from '../assets/car-career-ahead.jpg';
+import smartImg from '../assets/car-smart.jpg';
+import cvImg from '../assets/car-cv.jpg';
 
 export default function Carriere() {
   const c = UP_DATA.carriere;
   return (
     <section className="c-section" id="carriere">
+      <div
+        className="c-hero-bg"
+        aria-hidden="true"
+        style={{ backgroundImage: `url(${followUpImg})` }}
+      />
       <div className="c-bg" aria-hidden="true">
         <div className="c-bg-line"/>
         <div className="c-bg-line"/>
@@ -38,14 +47,20 @@ export default function Carriere() {
             <h3 className="c-block-title">{c.pourquoi.title}</h3>
           </div>
         </div>
-        <ul className="c-pourquoi-list">
-          {c.pourquoi.points.map((p, i) => (
-            <li key={i}>
-              <span className="c-pq-marker"/>
-              <span>{p}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="c-with-visual">
+          <ul className="c-pourquoi-list c-pourquoi-list-stacked">
+            {c.pourquoi.points.map((p, i) => (
+              <li key={i}>
+                <span className="c-pq-marker"/>
+                <span>{p}</span>
+              </li>
+            ))}
+          </ul>
+          <figure className="c-figure">
+            <img src={careerAheadImg} alt="Career Ahead — panneau ciel"/>
+            <figcaption>Career Ahead</figcaption>
+          </figure>
+        </div>
       </div>
 
       {/* 2 — Le métier de consultant */}
@@ -57,7 +72,13 @@ export default function Carriere() {
             <h3 className="c-block-title">{c.metier.title}</h3>
           </div>
         </div>
-        <p className="c-block-intro">{c.metier.intro}</p>
+        <div className="c-intro-row">
+          <p className="c-block-intro">{c.metier.intro}</p>
+          <figure className="c-figure c-figure-sm">
+            <img src={smartImg} alt="SMART — Specific, Measurable, Achievable, Realistic, Timely"/>
+            <figcaption>SMART · objectifs consultant</figcaption>
+          </figure>
+        </div>
 
         <div className="c-twocol">
           <div className="c-twocol-side c-twocol-pos">
@@ -108,6 +129,10 @@ export default function Carriere() {
         </div>
         <div className="c-questions">
           <div className="c-q-side">
+            <figure className="c-figure c-figure-cv">
+              <img src={cvImg} alt="Curriculum Vitae"/>
+              <figcaption>Définir ton projet pro</figcaption>
+            </figure>
             <p className="c-q-intro">{c.rejoindre.intro}</p>
             <a className="btn btn-primary" href={`mailto:${UP_DATA.contact.email}?subject=Candidature spontanée`}>
               Candidater par mail <Icon name="arrow" size={16}/>

@@ -9,7 +9,7 @@ export default function Footer() {
       <div className="container">
         <div className="footer-grid">
           <div>
-            <UpLogo color="#fff" textColor="rgba(255,255,255,0.7)" size={1.1}/>
+            <UpLogo dark size={1.2}/>
             <p className="footer-tag">
               Conseil en ingénierie spécialisé en électronique, informatique embarquée
               et systèmes mécatroniques. 6 agences en France.

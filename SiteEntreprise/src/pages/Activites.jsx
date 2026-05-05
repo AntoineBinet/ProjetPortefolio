@@ -1,22 +1,37 @@
 import { useState } from 'react';
 import Icon from '../components/Icon';
 import { UP_DATA } from '../data';
+import sectorAuto from '../assets/sector-auto.png';
+import sectorAero from '../assets/sector-aero.png';
+import sectorEnergie from '../assets/sector-energie.jpg';
+import sectorFerro from '../assets/sector-ferro.jpg';
+import sectorSante from '../assets/sector-sante.jpg';
+
+const sectorPhoto = {
+  auto: sectorAuto,
+  aero: sectorAero,
+  energie: sectorEnergie,
+  ferro: sectorFerro,
+  sante: sectorSante,
+};
 
 export default function Activites() {
   const [active, setActive] = useState(0);
   const sectors = UP_DATA.secteurs;
   const c = UP_DATA.sectorContent[sectors[active].key];
+  const photo = sectorPhoto[sectors[active].key];
 
   return (
     <section className="a-section" id="activites">
       <div className="container a-head">
         <div className="kicker">Activités · 7 métiers · 5 secteurs</div>
         <h2 className="display">
-          Les <em>domaines</em> où<br/>nous apportons<br/>notre expertise.
+          Les <em>domaines</em> dans<br/>lesquels nous apportons<br/>notre expertise.
         </h2>
         <p className="lead">
-          Bureau d'études et conseil en ingénierie : Up Technologies couvre la chaîne complète
-          de l'électronique, de l'informatique embarquée et des systèmes mécatroniques.
+          Bureau d'études et conseil en ingénierie&nbsp;: Up Technologies couvre la chaîne complète
+          de l'électronique, de l'informatique embarquée et des systèmes mécatroniques —
+          en assistance technique, en forfait/workpackage ou en innovation.
         </p>
       </div>
 
@@ -76,6 +91,9 @@ export default function Activites() {
           <div className="a-split-main">
             <div className="a-vis">
               <div className="a-vis-inner" key={active}>
+                {photo && (
+                  <img src={photo} alt={sectors[active].label} className="a-vis-photo"/>
+                )}
                 <div className="a-vis-bg" />
                 <div className="a-vis-kpi">
                   <span className="a-vis-num">{c.kpi}</span>

@@ -13,7 +13,7 @@ export default function Qualite() {
       <div className="q-ticker" aria-hidden="true">
         <div className="q-ticker-track">
           {Array.from({ length: 3 }).map((_, i) => (
-            <span key={i}>ISO 9001 · ISO 14001 · ISO 27001 · EcoVadis Silver · Agrément CIR · Time for the Planet · ISO 9001 · ISO 14001 · ISO 27001 · EcoVadis Silver · Agrément CIR · Time for the Planet · </span>
+            <span key={i}>EcoVadis Silver · ISO 9001 · ISO 14001 · ISO 27001 · Agrément CIR · Time for the Planet · EcoVadis Silver · ISO 9001 · ISO 14001 · ISO 27001 · Agrément CIR · Time for the Planet · </span>
           ))}
         </div>
       </div>
@@ -24,9 +24,10 @@ export default function Qualite() {
             Auditée. <em>Certifiée.</em><br/>Mesurée.
           </h2>
           <p className="lead">
-            Up Technologies est engagée dans une démarche d'amélioration continue
-            appuyée sur les normes ISO 9001, ISO 14001, ISO 27001 et la démarche EcoVadis.
-            Nos activités R&D sont reconnues par l'agrément CIR.
+            Up est engagée dans une politique d'amélioration continue en s'appuyant
+            sur les normes ISO 9001, ISO 14001, ISO 27001 et les démarches EcoVadis.
+            Nos activités de R&amp;D sont reconnues par l'administration et éligibles
+            au Crédit d'Impôt Recherche.
           </p>
 
           <div className="q-docs">
@@ -54,7 +55,7 @@ export default function Qualite() {
             <div className="q-badge" key={c.kind} style={{ '--i': i }}>
               <div className="q-badge-visual"><CertBadge kind={c.kind} size={88}/></div>
               <div className="q-badge-info">
-                <div className="q-badge-num">{String(i + 1).padStart(2, '0')} / 06</div>
+                <div className="q-badge-num">{String(i + 1).padStart(2, '0')} / {String(UP_DATA.certifications.length).padStart(2, '0')}</div>
                 <div className="q-badge-name">{c.name}</div>
                 <div className="q-badge-desc">{c.desc}</div>
                 <div className="q-badge-status"><span className="q-badge-dot"/> active · {c.year}</div>
