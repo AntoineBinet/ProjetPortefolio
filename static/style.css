@@ -556,6 +556,7 @@ body.is-zooming .scroll-cue {
   position: absolute; inset: 0;
   background: var(--paper);
   pointer-events: none;
+  overflow: hidden;
 }
 .browser-frame {
   position: absolute; top: 0; left: 0;
@@ -565,6 +566,39 @@ body.is-zooming .scroll-cue {
   transform-origin: top left;
   background: var(--paper);
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 420ms ease;
+}
+.browser-preview.is-loaded .browser-frame { opacity: 1; }
+
+.browser-skeleton {
+  position: absolute; inset: 0;
+  padding: 60px 56px;
+  display: flex; flex-direction: column; gap: 18px;
+  background: linear-gradient(180deg, #fbfaf7 0%, #f3f2ef 100%);
+  pointer-events: none;
+  transition: opacity 380ms ease;
+  z-index: 1;
+}
+.browser-preview.is-loaded .browser-skeleton { opacity: 0; }
+.browser-skeleton-bar {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #ececea 0%, #f6f5f2 50%, #ececea 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s linear infinite;
+}
+.browser-skeleton-block {
+  flex: 1;
+  margin-top: 14px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #ececea 0%, #f6f5f2 50%, #ececea 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s linear infinite;
+}
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .mockup-stripes {
