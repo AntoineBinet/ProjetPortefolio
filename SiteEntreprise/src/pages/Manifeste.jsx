@@ -1,31 +1,33 @@
 import Icon from '../components/Icon';
-import { UP_DATA } from '../data';
+import { useContent } from '../admin/AdminContext';
+import { Editable } from '../admin/Editable';
 
 export default function Manifeste() {
-  const data = UP_DATA.whyUp;
+  const c = useContent();
+  const data = c.whyUp || [];
+  const m = c.manifeste || {};
+  const contact = c.contact || {};
+  const marquee = m.marquee || 'Manifeste · 2026 · Up Technologies · Réactivité';
+
   return (
     <section className="m-section" id="manifeste">
       <div className="m-marquee" aria-hidden="true">
         <div className="m-marquee-track">
           {Array.from({ length: 4 }).map((_, i) => (
-            <span key={i}>Manifeste · 2026 · Up Technologies · Réactivité &nbsp;◆&nbsp; Manifeste · 2026 · Up Technologies · Réactivité &nbsp;◆&nbsp;</span>
+            <span key={i}>{marquee} &nbsp;◆&nbsp; {marquee} &nbsp;◆&nbsp;</span>
           ))}
         </div>
       </div>
       <div className="container">
         <div className="m-head">
-          <div className="kicker">5 convictions · développement de systèmes complexes</div>
-          <h2 className="display">
-            Alors venez<br/>
-            <em>participer</em> à notre<br/>
-            développement.
-          </h2>
+          <Editable as="div" className="kicker" path="manifeste.kicker" />
+          <Editable as="h2" className="display" path="manifeste.titleHtml" html />
           <div className="m-head-cta">
             <a className="btn btn-primary" href="#carriere">
-              Découvrir nos opportunités <Icon name="arrow" size={16}/>
+              <Editable path="manifeste.ctaPrimary" /> <Icon name="arrow" size={16}/>
             </a>
-            <a className="btn btn-ghost" href={`mailto:${UP_DATA.contact.email}`}>
-              Nous contacter
+            <a className="btn btn-ghost" href={`mailto:${contact.email || ''}`}>
+              <Editable path="manifeste.ctaSecondary" />
             </a>
           </div>
         </div>
@@ -34,10 +36,10 @@ export default function Manifeste() {
         <div className="m-rail">
           {data.map((b, i) => (
             <article className="m-card" key={i} style={{ '--i': i }}>
-              <div className="m-card-num">{String(i + 1).padStart(2, '0')}<span>/05</span></div>
+              <div className="m-card-num">{String(i + 1).padStart(2, '0')}<span>/0{data.length}</span></div>
               <div className="m-card-icon"><Icon name={b.icon} size={32} stroke="#EF8827"/></div>
-              <h3>{b.title}</h3>
-              <p>{b.text}</p>
+              <Editable as="h3" path={`whyUp.${i}.title`} />
+              <Editable as="p" path={`whyUp.${i}.text`} multiline />
               <div className="m-card-footer">
                 <span className="m-card-tag">conviction · {String(i + 1).padStart(2, '0')}</span>
                 <Icon name="arrow" size={16} stroke="#EF8827"/>

@@ -1,21 +1,22 @@
 import UpLogo from './UpLogo';
 import Icon from './Icon';
-import { UP_DATA } from '../data';
+import { useContent } from '../admin/AdminContext';
+import { Editable } from '../admin/Editable';
 
 export default function Footer() {
-  const docs = UP_DATA.documents;
+  const c = useContent();
+  const docs = c.documents || [];
+  const contact = c.contact || {};
+  const f = c.footer || {};
   return (
     <footer className="footer">
       <div className="container">
         <div className="footer-grid">
           <div>
             <UpLogo dark size={1.2}/>
-            <p className="footer-tag">
-              Conseil en ingénierie spécialisé en électronique, informatique embarquée
-              et systèmes mécatroniques. 6 agences en France.
-            </p>
-            <a className="footer-original" href={UP_DATA.contact.siteOriginal} target="_blank" rel="noopener noreferrer">
-              Site officiel · up-technologies.fr <Icon name="arrow" size={12}/>
+            <Editable as="p" className="footer-tag" path="footer.tag" multiline />
+            <a className="footer-original" href={contact.siteOriginal || '#'} target="_blank" rel="noopener noreferrer">
+              <Editable path="footer.originalLabel" /> <Icon name="arrow" size={12}/>
             </a>
           </div>
           <div>
@@ -36,28 +37,30 @@ export default function Footer() {
                   <a href={d.url} target="_blank" rel="noopener noreferrer">{d.label}</a>
                 </li>
               ))}
-              <li>
-                <a href={docs[5].url} target="_blank" rel="noopener noreferrer">Charte RGPD</a>
-              </li>
+              {docs[5] && (
+                <li>
+                  <a href={docs[5].url} target="_blank" rel="noopener noreferrer">Charte RGPD</a>
+                </li>
+              )}
             </ul>
           </div>
           <div>
             <h4>Contact</h4>
             <ul>
-              <li><a href={`mailto:${UP_DATA.contact.email}`}>{UP_DATA.contact.email}</a></li>
-              <li><a href={UP_DATA.contact.telHref}>{UP_DATA.contact.tel}</a></li>
-              <li><a href={UP_DATA.contact.linkedin} target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
-              <li><a href={UP_DATA.contact.intranet} target="_blank" rel="noopener noreferrer">Espace intranet</a></li>
+              <li><a href={`mailto:${contact.email || ''}`}><Editable path="contact.email" /></a></li>
+              <li><a href={contact.telHref || '#'}><Editable path="contact.tel" /></a></li>
+              <li><a href={contact.linkedin || '#'} target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
+              <li><a href={contact.intranet || '#'} target="_blank" rel="noopener noreferrer">Espace intranet</a></li>
             </ul>
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© 2026 Up Technologies — Tous droits réservés</span>
+          <Editable as="span" path="footer.copyright" />
           <div className="footer-social">
-            <a href={UP_DATA.contact.linkedin} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
+            <a href={contact.linkedin || '#'} target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
               <Icon name="linkedin" size={16}/>
             </a>
-            <a href={`mailto:${UP_DATA.contact.email}`} aria-label="Email">
+            <a href={`mailto:${contact.email || ''}`} aria-label="Email">
               <Icon name="mail" size={16}/>
             </a>
           </div>
