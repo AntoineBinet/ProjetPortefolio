@@ -67,6 +67,27 @@
       <span id="passStatus" class="muted small"></span>
     </form>
   </section>
+
+  <section class="admin-card" id="demandesCard">
+    <h2>Demandes de modifications</h2>
+    <p class="muted">
+      Note ici les modifs à apporter au site. Chaque demande est horodatée, modifiable, et peut être archivée.
+    </p>
+    <form id="formDemande" class="demande-form">
+      <textarea id="demandeText" placeholder="Décris la modification souhaitée…" rows="2" maxlength="4000" required></textarea>
+      <div class="demande-form-row">
+        <span id="demandeStatus" class="muted small"></span>
+        <button type="submit" class="btn-primary">Ajouter</button>
+      </div>
+    </form>
+
+    <ol id="demandesList" class="timeline" aria-live="polite"></ol>
+    <p id="demandesEmpty" class="muted small timeline-empty" hidden>Aucune demande active.</p>
+
+    <div class="timeline-footer">
+      <a href="{{ url_for('admin_demandes_archivees') }}" class="link-archives">Voir les demandes archivées →</a>
+    </div>
+  </section>
 </main>
 
 <style>
@@ -190,6 +211,130 @@
     } catch (e) {
       plog.textContent = "Erreur réseau : " + e.message;
       btn.disabled = false;
+    }
+  });
+
+  // Demandes de modifications (timeline)
+  const demandesList = $("#demandesList");
+  const demandesEmpty = $("#demandesEmpty");
+  const demandeText = $("#demandeText");
+  const demandeStatus = $("#demandeStatus");
+
+  function fmtDate(iso) {
+    if (!iso) return "";
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+    } catch { return iso; }
+  }
+
+  function renderDemandes(items) {
+    demandesList.innerHTML = "";
+    if (!items.length) {
+      demandesEmpty.hidden = false;
+      return;
+    }
+    demandesEmpty.hidden = true;
+    items.forEach((it) => {
+      const li = document.createElement("li");
+      li.className = "timeline-item";
+      li.dataset.id = it.id;
+      const updated = it.updated_at && it.updated_at !== it.created_at
+        ? ` · modif. ${fmtDate(it.updated_at)}`
+        : "";
+      li.innerHTML = `
+        <div class="timeline-dot" aria-hidden="true"></div>
+        <div class="timeline-body">
+          <time class="timeline-time">${fmtDate(it.created_at)}${updated}</time>
+          <p class="timeline-text"></p>
+          <div class="timeline-actions">
+            <button type="button" class="btn-ghost btn-xs" data-act="edit">Modifier</button>
+            <button type="button" class="btn-ghost btn-xs" data-act="archive">Archiver</button>
+          </div>
+        </div>`;
+      li.querySelector(".timeline-text").textContent = it.text;
+      demandesList.appendChild(li);
+    });
+  }
+
+  async function loadDemandes() {
+    try {
+      const r = await fetch("/api/demandes-modifs");
+      const d = await r.json();
+      if (d.ok) renderDemandes(d.items || []);
+    } catch {}
+  }
+  loadDemandes();
+
+  $("#formDemande").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = demandeText.value.trim();
+    if (!text) return;
+    demandeStatus.textContent = "Enregistrement…";
+    demandeStatus.style.color = "";
+    try {
+      const r = await fetch("/api/demandes-modifs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        demandeText.value = "";
+        demandeStatus.textContent = "✓ Ajouté";
+        demandeStatus.style.color = "var(--green, #16a34a)";
+        loadDemandes();
+        setTimeout(() => { demandeStatus.textContent = ""; }, 2000);
+      } else {
+        demandeStatus.textContent = "Erreur : " + (d.error || "?");
+        demandeStatus.style.color = "var(--red, #dc2626)";
+      }
+    } catch (err) {
+      demandeStatus.textContent = "Erreur réseau : " + err.message;
+      demandeStatus.style.color = "var(--red, #dc2626)";
+    }
+  });
+
+  demandesList.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button[data-act]");
+    if (!btn) return;
+    const li = btn.closest(".timeline-item");
+    if (!li) return;
+    const id = li.dataset.id;
+    const act = btn.dataset.act;
+
+    if (act === "edit") {
+      const p = li.querySelector(".timeline-text");
+      const current = p.textContent;
+      const next = prompt("Modifier la demande :", current);
+      if (next === null) return;
+      const text = next.trim();
+      if (!text || text === current) return;
+      try {
+        const r = await fetch("/api/demandes-modifs/" + encodeURIComponent(id), {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        const d = await r.json();
+        if (d.ok) loadDemandes();
+        else alert("Erreur : " + (d.error || "?"));
+      } catch (err) {
+        alert("Erreur réseau : " + err.message);
+      }
+    } else if (act === "archive") {
+      try {
+        const r = await fetch("/api/demandes-modifs/" + encodeURIComponent(id) + "/archive", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ archived: true }),
+        });
+        const d = await r.json();
+        if (d.ok) loadDemandes();
+        else alert("Erreur : " + (d.error || "?"));
+      } catch (err) {
+        alert("Erreur réseau : " + err.message);
+      }
     }
   });
 

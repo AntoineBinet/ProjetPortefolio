@@ -37,6 +37,8 @@ ADMIN_USER = os.environ.get("PORTFOLIO_USER", "admin")
 ADMIN_PASS = os.environ.get("PORTFOLIO_PASS", "admin")
 
 CONFIG_FILE = APP_DIR / ".portfolio_config.json"
+DEMANDES_FILE = APP_DIR / ".demandes_modifs.json"
+_DEMANDES_LOCK = threading.Lock()
 
 
 def _load_config() -> dict:
@@ -48,6 +50,24 @@ def _load_config() -> dict:
 
 def _save_config(data: dict) -> None:
     CONFIG_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _load_demandes() -> list:
+    try:
+        data = json.loads(DEMANDES_FILE.read_text(encoding="utf-8"))
+        if isinstance(data, list):
+            return data
+    except Exception:
+        pass
+    return []
+
+
+def _save_demandes(items: list) -> None:
+    DEMANDES_FILE.write_text(json.dumps(items, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _now_iso() -> str:
+    return datetime.datetime.now().isoformat(timespec="seconds")
 
 
 _local_cfg = _load_config()
@@ -565,6 +585,110 @@ def api_deploy_launch_prospup():
     except Exception as exc:
         log.append("Erreur lancement : " + str(exc))
         return jsonify(ok=False, error=str(exc), log=log), 500
+
+
+@deploy_bp.get("/api/demandes-modifs")
+@login_required
+def api_demandes_list():
+    archived = request.args.get("archived", "0") in ("1", "true", "yes")
+    items = [d for d in _load_demandes() if bool(d.get("archived")) == archived]
+    items.sort(key=lambda d: d.get("created_at", ""), reverse=True)
+    return jsonify(ok=True, items=items)
+
+
+@deploy_bp.post("/api/demandes-modifs")
+@login_required
+def api_demandes_create():
+    chk = _require_same_origin()
+    if chk:
+        return chk
+    data = request.get_json(silent=True) or {}
+    text = (data.get("text") or "").strip()
+    if not text:
+        return jsonify(ok=False, error="Texte vide"), 400
+    if len(text) > 4000:
+        return jsonify(ok=False, error="Texte trop long (max 4000)"), 400
+    now = _now_iso()
+    item = {
+        "id": secrets.token_hex(8),
+        "text": text,
+        "created_at": now,
+        "updated_at": now,
+        "archived": False,
+        "archived_at": None,
+    }
+    with _DEMANDES_LOCK:
+        items = _load_demandes()
+        items.append(item)
+        _save_demandes(items)
+    return jsonify(ok=True, item=item)
+
+
+@deploy_bp.patch("/api/demandes-modifs/<demande_id>")
+@login_required
+def api_demandes_update(demande_id):
+    chk = _require_same_origin()
+    if chk:
+        return chk
+    data = request.get_json(silent=True) or {}
+    text = (data.get("text") or "").strip()
+    if not text:
+        return jsonify(ok=False, error="Texte vide"), 400
+    if len(text) > 4000:
+        return jsonify(ok=False, error="Texte trop long (max 4000)"), 400
+    with _DEMANDES_LOCK:
+        items = _load_demandes()
+        for it in items:
+            if it.get("id") == demande_id:
+                it["text"] = text
+                it["updated_at"] = _now_iso()
+                _save_demandes(items)
+                return jsonify(ok=True, item=it)
+    return jsonify(ok=False, error="Introuvable"), 404
+
+
+@deploy_bp.post("/api/demandes-modifs/<demande_id>/archive")
+@login_required
+def api_demandes_archive(demande_id):
+    chk = _require_same_origin()
+    if chk:
+        return chk
+    data = request.get_json(silent=True) or {}
+    archived = bool(data.get("archived", True))
+    with _DEMANDES_LOCK:
+        items = _load_demandes()
+        for it in items:
+            if it.get("id") == demande_id:
+                it["archived"] = archived
+                it["archived_at"] = _now_iso() if archived else None
+                it["updated_at"] = _now_iso()
+                _save_demandes(items)
+                return jsonify(ok=True, item=it)
+    return jsonify(ok=False, error="Introuvable"), 404
+
+
+@deploy_bp.delete("/api/demandes-modifs/<demande_id>")
+@login_required
+def api_demandes_delete(demande_id):
+    chk = _require_same_origin()
+    if chk:
+        return chk
+    with _DEMANDES_LOCK:
+        items = _load_demandes()
+        new_items = [it for it in items if it.get("id") != demande_id]
+        if len(new_items) == len(items):
+            return jsonify(ok=False, error="Introuvable"), 404
+        _save_demandes(new_items)
+    return jsonify(ok=True)
+
+
+@app.route("/admin/demandes-archivees")
+@login_required
+def admin_demandes_archivees():
+    return render_template(
+        "admin/demandes_archivees.html",
+        user=session.get("user"),
+    )
 
 
 app.register_blueprint(deploy_bp)
