@@ -14,13 +14,48 @@ export const UP_DATA = {
   rotatingWords: ['Expertise', 'Réactivité', 'Proximité', 'Flexibilité'],
 
   metiers: [
-    'Informatique embarquée',
-    'Électronique',
-    'Mécatronique / système',
-    'Moteur',
-    'Contrôle commande',
-    'Internet of Things',
-    'Gestion et coordination de projet',
+    {
+      name: 'Informatique embarquée',
+      icon: 'cpu',
+      description: "Logiciel temps réel sur microcontrôleurs et microprocesseurs : firmware, drivers, couches d'abstraction, OS embarqués.",
+      examples: ['Firmware C/C++ sur ARM Cortex', 'RTOS (FreeRTOS, Zephyr, AUTOSAR)', 'Bootloader & mises à jour OTA'],
+    },
+    {
+      name: 'Électronique',
+      icon: 'circuit',
+      description: "Conception de cartes électroniques, du schéma au prototype industriel : analogique, numérique, puissance et RF.",
+      examples: ['Schéma & routage PCB multi-couches', 'Cartes mixtes signal / puissance', 'Tests CEM et qualification'],
+    },
+    {
+      name: 'Mécatronique / système',
+      icon: 'gear',
+      description: "Architecture de systèmes mêlant mécanique, électronique et logiciel — du besoin client à la qualification système.",
+      examples: ['Ingénierie système (ISO 26262, ARP4754)', 'Spécifications & MBSE', 'V&V multi-domaines'],
+    },
+    {
+      name: 'Moteur',
+      icon: 'engine',
+      description: "Modélisation, calibration et essais moteur — thermique, hybride et électrique. Du banc d'essais à la simulation 1D.",
+      examples: ['Calibration moteur thermique', 'Simulation 1D (GT-Power, AMESim)', 'Essais banc & roulage'],
+    },
+    {
+      name: 'Contrôle commande',
+      icon: 'sliders',
+      description: "Lois de commande, automatique et asservissement temps réel pour systèmes industriels et embarqués critiques.",
+      examples: ['Identification & MATLAB / Simulink', 'Asservissement multi-boucles', 'Génération de code embarqué'],
+    },
+    {
+      name: 'Internet of Things',
+      icon: 'wifi',
+      description: "Objets connectés du capteur au cloud : protocoles radio, gateways, sécurité, plateformes de données.",
+      examples: ['LoRaWAN, BLE, Wi-Fi, NB-IoT', 'Edge computing & gateways', 'Cybersécurité & OTA flotte'],
+    },
+    {
+      name: 'Gestion et coordination de projet',
+      icon: 'flag',
+      description: "Pilotage technique et fonctionnel : planning, exigences, fournisseurs, qualité — V-cycle ou agile selon le secteur.",
+      examples: ['Pilotage forfait / workpackage', 'Référents techniques transverses', 'Méthodes V-cycle & agile'],
+    },
   ],
 
   secteurs: [
