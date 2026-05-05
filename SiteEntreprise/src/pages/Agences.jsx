@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import Icon from '../components/Icon';
 import { UP_DATA } from '../data';
+import agency1 from '../assets/agency-1.jpg';
+import agency2 from '../assets/agency-2.jpg';
+import agency3 from '../assets/agency-3.png';
+import agency4 from '../assets/agency-4.jpg';
+import agency5 from '../assets/agency-5.jpg';
+import agency6 from '../assets/agency-6.jpg';
+
+const agencyPhotos = [agency1, agency2, agency3, agency4, agency5, agency6];
 
 const minLat = 42.3, maxLat = 51.4, minLng = -5.5, maxLng = 8.5;
 
@@ -28,6 +36,27 @@ export default function Agences() {
           De Lyon à Sophia Antipolis, Up Technologies tisse un réseau d'agences
           au plus près des grands pôles industriels français.
         </p>
+      </div>
+
+      <div className="container g-cards">
+        {data.map((d, i) => (
+          <button
+            key={`card-${d.ville}`}
+            type="button"
+            className={`g-card ${i === hover ? 'is-active' : ''}`}
+            onMouseEnter={() => setHover(i)}
+            onClick={() => setHover(i)}
+          >
+            <div className="g-card-img">
+              <img src={agencyPhotos[i]} alt={`Agence ${d.ville}`}/>
+            </div>
+            <div className="g-card-body">
+              <span className="g-card-num">N°{String(i + 1).padStart(2, '0')}</span>
+              <h3>{d.ville}</h3>
+              <p>{d.adresse}<br/>{d.cp} {d.pays}</p>
+            </div>
+          </button>
+        ))}
       </div>
 
       <div className="g-stage">

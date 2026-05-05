@@ -8,31 +8,19 @@ import Qualite from './pages/Qualite';
 import Carriere from './pages/Carriere';
 import Agences from './pages/Agences';
 import Actualites from './pages/Actualites';
-import { TweaksPanel, TweakSection, TweakColor, TweakToggle, useTweaks } from './components/TweaksPanel';
 import './styles/base.css';
 import './styles/sections.css';
 
-const tweakDefaults = {
-  density: 2.2,
-  dark: false,
-  repel: true,
-  accent: '#EF8827',
-};
+const tweaks = { density: 2.2, dark: false, repel: true };
 
 export default function App() {
-  const [tweaks, setTweak] = useTweaks(tweakDefaults);
   const [active, setActive] = useState('home');
-  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 100);
+    const onScroll = () => {};
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  useEffect(() => {
-    document.documentElement.style.setProperty('--orange', tweaks.accent);
-  }, [tweaks.accent]);
 
   const onNav = (id) => {
     setActive(id);
@@ -41,8 +29,8 @@ export default function App() {
   };
 
   return (
-    <div className={tweaks.dark ? 'theme-dark' : ''}>
-      <Nav active={active} onNav={onNav} dark={tweaks.dark && !scrolled}/>
+    <div>
+      <Nav active={active} onNav={onNav} dark={false}/>
       <Hero tweaks={tweaks} />
       <Manifeste />
       <Activites />
@@ -51,13 +39,6 @@ export default function App() {
       <Agences />
       <Actualites />
       <Footer />
-
-      <TweaksPanel title="Tweaks">
-        <TweakSection label="Apparence">
-          <TweakColor label="Accent orange" value={tweaks.accent} onChange={v => setTweak('accent', v)} />
-          <TweakToggle label="Hero sombre" value={tweaks.dark} onChange={v => setTweak('dark', v)} />
-        </TweakSection>
-      </TweaksPanel>
     </div>
   );
 }

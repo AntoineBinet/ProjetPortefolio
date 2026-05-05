@@ -16,10 +16,9 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-  font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: 'Open Sans', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   background: var(--bg);
   color: var(--ink);
-  font-feature-settings: 'ss01','cv11';
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -60,6 +59,14 @@ a { color: inherit; text-decoration: none; }
   background: linear-gradient(180deg, #f3f3ef 0%, #e9e9e3 60%, #d9d9d2 100%);
 }
 .hero.is-dark { background: linear-gradient(180deg, #0a0f14 0%, #131a22 60%, #0d141b 100%); color: #fff; }
+.hero-poly {
+  position: absolute; inset: 0; z-index: 0;
+  background-size: cover; background-position: center;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+.hero.is-dark .hero-poly { opacity: 0.18; mix-blend-mode: screen; filter: invert(1) brightness(0.6); }
 .hero-cloud { position: absolute; inset: 0; z-index: 1; }
 .hero-grain {
   position: absolute; inset: 0; z-index: 2; pointer-events: none;
@@ -165,7 +172,13 @@ a { color: inherit; text-decoration: none; }
   to { opacity: 1; transform: translateY(0); }
 }
 .q-badge:hover { border-color: var(--orange); transform: translateY(-2px); box-shadow: 0 12px 32px rgba(17,32,42,0.06); }
-.q-badge-visual { display: grid; place-items: center; }
+.q-badge-visual {
+  display: grid; place-items: center;
+  width: 100px; height: 100px;
+  background: #fafaf8; border-radius: 8px;
+  padding: 10px;
+}
+.q-badge-visual img { max-width: 100%; max-height: 100%; }
 .q-badge-info { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .q-badge-num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--gray-2); letter-spacing: 0.1em; }
 .q-badge-name { font-size: 17px; font-weight: 600; color: var(--ink); letter-spacing: -0.01em; }

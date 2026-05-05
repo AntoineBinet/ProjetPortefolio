@@ -13,8 +13,8 @@ const links = [
 export default function Nav({ active, onNav, dark }) {
   return (
     <nav className={`nav ${dark ? 'is-dark' : ''}`}>
-      <a href="#home" onClick={e => { e.preventDefault(); onNav('home'); }}>
-        <UpLogo color={dark ? '#fff' : '#EF8827'} textColor={dark ? '#fff' : '#11202A'} size={1} />
+      <a href="#home" onClick={e => { e.preventDefault(); onNav('home'); }} className="nav-brand">
+        <UpLogo dark={dark} size={1} />
       </a>
       <div className="nav-links">
         {links.map(l => (

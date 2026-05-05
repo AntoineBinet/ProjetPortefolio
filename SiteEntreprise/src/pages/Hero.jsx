@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import PointCloud from '../components/PointCloud';
 import Icon from '../components/Icon';
 import { UP_DATA } from '../data';
+import polygonsBg from '../assets/hero-polygons.png';
 
 export default function Hero({ tweaks }) {
   const words = UP_DATA.rotatingWords;
@@ -14,6 +15,11 @@ export default function Hero({ tweaks }) {
 
   return (
     <section className="hero" id="home">
+      <div
+        className="hero-poly"
+        aria-hidden="true"
+        style={{ backgroundImage: `url(${polygonsBg})` }}
+      />
       <div className="hero-cloud">
         <PointCloud density={tweaks.density} dark={tweaks.dark} repel={tweaks.repel} />
       </div>
@@ -31,8 +37,9 @@ export default function Hero({ tweaks }) {
           </span>
         </h1>
         <p className="hero-sub">
-          Up Technologies — société de conseil en ingénierie et bureau d'études en électronique,
-          informatique embarquée et systèmes mécatroniques. 6 agences en France, 5 secteurs industriels.
+          UP TECHNOLOGIES&nbsp;! Société de conseil en ingénierie et bureau d'études
+          en électronique, informatique embarquée, et systèmes mécatroniques.
+          6 agences en France, 5 secteurs industriels.
         </p>
         <div className="hero-cta">
           <a className="btn btn-primary" href="#carriere">

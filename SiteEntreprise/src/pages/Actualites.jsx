@@ -1,6 +1,18 @@
 import { useState } from 'react';
 import Icon from '../components/Icon';
 import { UP_DATA } from '../data';
+import medaille from '../assets/post-medaille.png';
+import electronique from '../assets/post-electronique.png';
+import defi from '../assets/post-power-up-defi.png';
+import certif2x from '../assets/post-2-fois-certif.png';
+import env from '../assets/post-objectifs-env.jpg';
+import sophia from '../assets/post-nice-sophia.png';
+import noel from '../assets/post-noel-2023.png';
+import grenoble from '../assets/post-grenoble.png';
+import sido from '../assets/post-sido.jpg';
+import powerup from '../assets/post-power-up-grandit.png';
+
+const covers = { medaille, electronique, defi, certif2x, env, sophia, noel, grenoble, sido, powerup };
 
 const SITE = 'https://up-technologies.fr';
 
@@ -41,7 +53,9 @@ export default function Actualites() {
         <div className="container">
           <a href={articleUrl(feature.slug)} target="_blank" rel="noopener noreferrer" className="n-feature">
             <div className="n-feature-img">
-              <div className="n-pattern p-0"/>
+              {covers[feature.cover] && (
+                <img src={covers[feature.cover]} alt={feature.title} className="n-feature-photo"/>
+              )}
               <span className="n-feature-tag">{feature.tag}</span>
               <span className="n-feature-edition">Édition #{items.length}</span>
             </div>
@@ -64,7 +78,11 @@ export default function Actualites() {
           {rest.map((n, i) => (
             <a className="n-card" key={i + 1} href={articleUrl(n.slug)} target="_blank" rel="noopener noreferrer">
               <div className="n-card-img">
-                <div className={`n-pattern p-${(i + 1) % 4}`}/>
+                {covers[n.cover] ? (
+                  <img src={covers[n.cover]} alt={n.title} className="n-card-photo"/>
+                ) : (
+                  <div className={`n-pattern p-${(i + 1) % 4}`}/>
+                )}
               </div>
               <div className="n-card-body">
                 <div className="n-card-meta">
