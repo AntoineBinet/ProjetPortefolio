@@ -51,16 +51,11 @@ _rooms_lock = Lock()
 # Cookie de session Casino — distinct de la session Portfolio
 CASINO_COOKIE = "casino_session"
 
-# Mot de passe admin (lu au moment du login pour respecter les changements
-# d'env var sans restart). Cf. casino_db.ensure_admin pour bootstrap.
-def _admin_password() -> str:
-    return os.environ.get("PORTFOLIO_PASS", "admin")
-
 
 # ── Init DB au chargement du module ──────────────────────────────
 casino_db.init()
 casino_db.ensure_admin(
-    name=os.environ.get("PORTFOLIO_NAME", "Antoine"),
+    name="admin",
     chips=int(os.environ.get("CASINO_ADMIN_CHIPS", "100000")),
 )
 
@@ -176,7 +171,13 @@ def _user_payload(u: dict) -> dict:
 @casino_bp.get("/casino/api/me")
 def api_me():
     u = _casino_user()
-    return jsonify(ok=True, user=_user_payload(u) if u else None)
+    payload = {
+        "user": _user_payload(u) if u else None,
+        "must_change_password": bool(
+            u and u.get("is_admin") and casino_db.admin_must_change_password()
+        ),
+    }
+    return jsonify(ok=True, **payload)
 
 
 @casino_bp.post("/casino/api/auth/admin-login")
@@ -184,27 +185,36 @@ def api_admin_login():
     chk = _require_same_origin()
     if chk: return chk
     data = request.get_json(silent=True) or {}
+    user_in = (data.get("username") or "").strip()
     pwd = (data.get("password") or "").strip()
-    # Vérif via DB (hash stocké) ou fallback PORTFOLIO_PASS si pas encore défini
-    if not casino_db.check_admin_password(pwd, env_fallback=_admin_password()):
+    expected_user = casino_db.get_admin_username()
+    if not secrets.compare_digest(user_in, expected_user) or not casino_db.check_admin_password(pwd):
         time.sleep(0.5)
-        return jsonify(ok=False, error="Mot de passe incorrect"), 401
+        return jsonify(ok=False, error="Identifiants invalides"), 401
     admin_id = casino_db.ensure_admin(
-        name=os.environ.get("PORTFOLIO_NAME", "Antoine"),
+        name="admin",
         chips=int(os.environ.get("CASINO_ADMIN_CHIPS", "100000")),
     )
     token = casino_db.create_session(
         admin_id, ip=_client_ip(), ua=request.headers.get("User-Agent"),
     )
     user = casino_db.get_user(admin_id)
-    resp = jsonify(ok=True, user=_user_payload(user))
+    resp = jsonify(
+        ok=True,
+        user=_user_payload(user),
+        must_change_password=casino_db.admin_must_change_password(),
+    )
     _set_casino_cookie(resp, token)
     return resp
 
 
 @casino_bp.post("/casino/api/auth/admin-password")
 def api_admin_change_password():
-    """Change le mot de passe admin Casino. Requiert l'admin connecté + l'ancien mdp."""
+    """Change le mot de passe admin Casino. Requiert l'admin connecté + l'ancien mdp.
+
+    Permet aussi de changer l'identifiant admin en une seule étape (utile au
+    forçage du premier changement).
+    """
     admin, err = _require_admin()
     if err: return err
     chk = _require_same_origin()
@@ -212,13 +222,20 @@ def api_admin_change_password():
     data = request.get_json(silent=True) or {}
     old = (data.get("old_password") or "").strip()
     new = (data.get("new_password") or "").strip()
+    new_user = (data.get("new_username") or "").strip()
     if len(new) < 6:
         return jsonify(ok=False, error="Nouveau mot de passe trop court (min 6)"), 400
-    if not casino_db.check_admin_password(old, env_fallback=_admin_password()):
+    if not casino_db.check_admin_password(old):
         time.sleep(0.5)
         return jsonify(ok=False, error="Ancien mot de passe incorrect"), 401
     casino_db.set_admin_password(new)
-    return jsonify(ok=True, message="Mot de passe mis à jour")
+    if new_user and new_user != casino_db.get_admin_username():
+        try:
+            casino_db.set_admin_username(new_user)
+        except ValueError as e:
+            return jsonify(ok=False, error=str(e)), 400
+    return jsonify(ok=True, message="Mot de passe mis à jour",
+                   admin_username=casino_db.get_admin_username())
 
 
 @casino_bp.post("/casino/api/auth/logout")

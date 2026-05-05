@@ -25,7 +25,7 @@ function getByPath(obj, path) {
 function deepMerge(base, override) {
   if (override == null) return base;
   if (base == null) return override;
-  if (Array.isArray(override)) return override;          // arrays replace
+  if (Array.isArray(override)) return override;
   if (typeof base !== 'object' || typeof override !== 'object') return override;
   const out = { ...base };
   for (const k of Object.keys(override)) {
@@ -52,12 +52,14 @@ function setByPath(obj, path, value) {
 export function AdminProvider({ children }) {
   const [content, setContent] = useState(UP_DATA);
   const [loaded, setLoaded] = useState(false);
-  const [auth, setAuth] = useState({ authenticated: false, user: null, source: null });
+  // auth = { authenticated, must_change_password }
+  const [auth, setAuth] = useState({ authenticated: false, must_change_password: false });
   const [editMode, setEditMode] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [error, setError] = useState(null);
   const lastSavedRef = useRef(null);
 
@@ -70,19 +72,17 @@ export function AdminProvider({ children }) {
         .catch(() => null),
       fetch(`${API}/auth/me`, { credentials: 'include' })
         .then(r => r.json())
-        .catch(() => ({ authenticated: false })),
+        .catch(() => ({ authenticated: false, must_change_password: false })),
     ]).then(([c, a]) => {
       if (cancelled) return;
       if (c && typeof c === 'object') {
-        // Deep merge avec les défauts pour rester robuste si content.json est
-        // partiel ou corrompu (ex. clé manquante après un schéma plus récent).
         const merged = deepMerge(UP_DATA, c);
         setContent(merged);
         lastSavedRef.current = merged;
       } else {
         lastSavedRef.current = UP_DATA;
       }
-      setAuth(a || { authenticated: false, user: null, source: null });
+      setAuth(a || { authenticated: false, must_change_password: false });
       setLoaded(true);
     });
     return () => { cancelled = true; };
@@ -97,7 +97,6 @@ export function AdminProvider({ children }) {
   }, []);
 
   const setFields = useCallback((updates) => {
-    // updates : array de [path, value]
     setContent(prev => {
       let next = prev;
       for (const [p, v] of updates) next = setByPath(next, p, v);
@@ -138,23 +137,29 @@ export function AdminProvider({ children }) {
     setDirty(false);
   }, []);
 
-  const login = useCallback(async (username, password) => {
+  const login = useCallback(async (password) => {
     setError(null);
     try {
       const r = await fetch(`${API}/auth/login`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ password }),
       });
       const data = await r.json().catch(() => ({}));
       if (r.ok && data.ok) {
-        setAuth({ authenticated: true, user: data.user || username, source: data.source || 'site' });
+        setAuth({
+          authenticated: true,
+          must_change_password: !!data.must_change_password,
+        });
         setShowLogin(false);
         setEditMode(true);
+        if (data.must_change_password) {
+          setShowChangePassword(true);
+        }
         return { ok: true };
       }
-      return { ok: false, error: data.error || 'Identifiants invalides' };
+      return { ok: false, error: data.error || 'Mot de passe incorrect' };
     } catch (e) {
       return { ok: false, error: e.message || 'Erreur réseau' };
     }
@@ -164,49 +169,31 @@ export function AdminProvider({ children }) {
     try {
       await fetch(`${API}/auth/logout`, { method: 'POST', credentials: 'include' });
     } catch {}
-    // On re-fetch /api/auth/me : si la session Portfolio est encore là, on
-    // reste admin via "portfolio". Sinon, l'auth retombe à false.
-    try {
-      const r = await fetch(`${API}/auth/me`, { credentials: 'include' });
-      const me = await r.json().catch(() => ({ authenticated: false }));
-      setAuth(me);
-    } catch {
-      setAuth({ authenticated: false, user: null, source: null });
-    }
+    setAuth({ authenticated: false, must_change_password: false });
     setEditMode(false);
   }, []);
 
-  // ---- User management ----
-
-  const apiUsers = useCallback(async (path = '', init = {}) => {
-    const r = await fetch(`${API}/admin/users${path}`, {
-      credentials: 'include',
-      ...init,
-      headers: { 'Content-Type': 'application/json', ...(init.headers || {}) },
-    });
-    const data = await r.json().catch(() => ({}));
-    return { ok: r.ok && data.ok !== false, status: r.status, data };
+  const changePassword = useCallback(async (oldPassword, newPassword) => {
+    try {
+      const r = await fetch(`${API}/auth/change-password`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok && data.ok) {
+        setAuth({
+          authenticated: true,
+          must_change_password: !!data.must_change_password,
+        });
+        return { ok: true };
+      }
+      return { ok: false, error: data.error || `Erreur ${r.status}` };
+    } catch (e) {
+      return { ok: false, error: e.message || 'Erreur réseau' };
+    }
   }, []);
-
-  const fetchUsers = useCallback(async () => apiUsers(''), [apiUsers]);
-
-  const createUser = useCallback(async (username, password) =>
-    apiUsers('', { method: 'POST', body: JSON.stringify({ username, password }) }),
-  [apiUsers]);
-
-  const updateUser = useCallback(async (username, { password, newUsername } = {}) =>
-    apiUsers(`/${encodeURIComponent(username)}`, {
-      method: 'POST',
-      body: JSON.stringify({
-        ...(password ? { password } : {}),
-        ...(newUsername ? { new_username: newUsername } : {}),
-      }),
-    }),
-  [apiUsers]);
-
-  const deleteUser = useCallback(async (username) =>
-    apiUsers(`/${encodeURIComponent(username)}`, { method: 'DELETE' }),
-  [apiUsers]);
 
   const uploadImage = useCallback(async (file) => {
     if (!file) return { ok: false, error: 'Aucun fichier' };
@@ -226,22 +213,29 @@ export function AdminProvider({ children }) {
     }
   }, []);
 
-  const [showUsers, setShowUsers] = useState(false);
+  // Toggle édition → si on quitte le mode édition avec dirty, on sauve d'abord.
+  const exitEditMode = useCallback(async () => {
+    if (dirty && !saving) {
+      const r = await save();
+      if (!r.ok) return r;
+    }
+    setEditMode(false);
+    return { ok: true };
+  }, [dirty, saving, save]);
 
   const value = useMemo(() => ({
     content, loaded,
     auth, editMode, setEditMode,
     dirty, saving, savedAt, error,
-    setField, setFields, save, discard,
-    login, logout, uploadImage,
+    setField, setFields, save, discard, exitEditMode,
+    login, logout, changePassword, uploadImage,
     showLogin, setShowLogin,
-    showUsers, setShowUsers,
-    fetchUsers, createUser, updateUser, deleteUser,
+    showChangePassword, setShowChangePassword,
     get: (path) => getByPath(content, path),
   }), [content, loaded, auth, editMode, dirty, saving, savedAt, error,
-       setField, setFields, save, discard, login, logout, uploadImage,
-       showLogin, showUsers,
-       fetchUsers, createUser, updateUser, deleteUser]);
+       setField, setFields, save, discard, exitEditMode,
+       login, logout, changePassword, uploadImage,
+       showLogin, showChangePassword]);
 
   return (
     <AdminContext.Provider value={value}>

@@ -18,6 +18,7 @@ export default function Icon({ name, size = 24, stroke = 'currentColor' }) {
     case 'mail': return <svg {...props}><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="M3 7 L 12 13 L 21 7"/></svg>;
     case 'linkedin': return <svg {...props}><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 10 L 8 17 M 8 7.5 L 8 7.6 M 12 17 L 12 10 M 12 13 Q 12 10, 15 10 Q 17 10, 17 13 L 17 17"/></svg>;
     case 'lock': return <svg {...props}><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11 L 8 7 Q 8 4, 12 4 Q 16 4, 16 7 L 16 11"/></svg>;
+    case 'unlock': return <svg {...props}><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11 L 8 7 Q 8 4, 12 4 Q 16 4, 16 7"/></svg>;
     case 'search': return <svg {...props}><circle cx="11" cy="11" r="6"/><path d="M16 16 L 20 20"/></svg>;
     case 'pin': return <svg {...props}><path d="M12 22 C 6 14, 5 11, 5 8 a 7 7 0 0 1 14 0 c 0 3-1 6-7 14 z"/><circle cx="12" cy="8" r="2.5"/></svg>;
     case 'check': return <svg {...props}><path d="M5 12 L 10 17 L 19 7"/></svg>;

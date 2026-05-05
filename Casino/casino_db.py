@@ -434,16 +434,43 @@ def verify_password(password: str, stored: str) -> bool:
 
 def set_admin_password(new_password: str) -> None:
     kv_set("admin_password_hash", hash_password(new_password))
+    kv_set("admin_password_changed", "1")
 
 
-def check_admin_password(password: str, env_fallback: str | None) -> bool:
-    """Vérifie le mdp admin :
-       1. Si un hash est stocké → utilise-le exclusivement (constante-temps).
-       2. Sinon, compare au fallback env (PORTFOLIO_PASS).
+def check_admin_password(password: str) -> bool:
+    """Vérifie le mdp admin Casino, totalement indépendant du Portfolio.
+
+    Si aucun hash n'est stocké en DB on accepte le défaut "admin" et l'UI
+    forcera le changement immédiatement (must_change_password).
     """
     stored = kv_get("admin_password_hash")
     if stored:
         return verify_password(password, stored)
-    if env_fallback is None:
+    return secrets.compare_digest(password.encode(), b"admin")
+
+
+def get_admin_username() -> str:
+    """Identifiant de login admin Casino. Défaut 'admin'."""
+    return kv_get("admin_username") or "admin"
+
+
+def set_admin_username(new_username: str) -> None:
+    new_username = (new_username or "").strip()
+    if not (1 <= len(new_username) <= 32):
+        raise ValueError("Identifiant invalide (1 à 32 caractères)")
+    kv_set("admin_username", new_username)
+
+
+def admin_must_change_password() -> bool:
+    """True tant que l'admin utilise encore le mot de passe par défaut.
+
+    Considéré « déjà changé » si :
+      - le flag explicite est posé, ou
+      - un hash personnalisé a déjà été stocké (compat installations existantes
+        d'avant l'introduction du flag).
+    """
+    if kv_get("admin_password_changed") == "1":
         return False
-    return secrets.compare_digest(password.encode(), env_fallback.encode())
+    if kv_get("admin_password_hash"):
+        return False
+    return True
