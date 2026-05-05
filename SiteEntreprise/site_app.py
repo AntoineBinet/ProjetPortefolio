@@ -176,4 +176,15 @@ def index(path):
         abort(404)
     if not _DIST.exists():
         abort(503)
+    # Sert les fichiers statiques de dist/ (ex. up-favicon.svg) tels quels.
+    # Si le chemin ne correspond à rien, fallback sur index.html (SPA routing).
+    if path:
+        candidate = _DIST / path
+        try:
+            candidate_resolved = candidate.resolve()
+            if (candidate_resolved.is_file()
+                    and _DIST.resolve() in candidate_resolved.parents):
+                return send_from_directory(_DIST, path, max_age=86_400)
+        except Exception:
+            pass
     return send_from_directory(_DIST, "index.html")
