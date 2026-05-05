@@ -8,12 +8,15 @@ import Qualite from './pages/Qualite';
 import Carriere from './pages/Carriere';
 import Agences from './pages/Agences';
 import Actualites from './pages/Actualites';
+import { AdminProvider } from './admin/AdminContext';
+import { AdminToolbar, AdminLoginModal } from './admin/AdminToolbar';
 import './styles/base.css';
 import './styles/sections.css';
+import './styles/admin.css';
 
 const tweaks = { density: 2.2, dark: false, repel: true };
 
-export default function App() {
+function Site() {
   const [active, setActive] = useState('home');
 
   useEffect(() => {
@@ -39,6 +42,16 @@ export default function App() {
       <Agences />
       <Actualites />
       <Footer />
+      <AdminToolbar />
+      <AdminLoginModal />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AdminProvider>
+      <Site />
+    </AdminProvider>
   );
 }

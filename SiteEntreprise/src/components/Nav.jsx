@@ -1,16 +1,40 @@
 import UpLogo from './UpLogo';
 import Icon from './Icon';
-import { UP_DATA } from '../data';
-
-const links = [
-  { id: 'home', label: "What's Up ?" },
-  { id: 'activites', label: 'Activité' },
-  { id: 'carriere', label: 'Carrière' },
-  { id: 'agences', label: 'Nos Agences' },
-  { id: 'actualites', label: 'Actualités' },
-];
+import { useAdmin, useContent } from '../admin/AdminContext';
 
 export default function Nav({ active, onNav, dark }) {
+  const data = useContent();
+  const { auth, editMode, setEditMode, setShowLogin } = useAdmin();
+
+  const links = data.navLinks || [
+    { id: 'home',       label: "What's Up ?" },
+    { id: 'activites',  label: 'Activité' },
+    { id: 'carriere',   label: 'Carrière' },
+    { id: 'agences',    label: 'Nos Agences' },
+    { id: 'actualites', label: 'Actualités' },
+  ];
+
+  const lockTitle = !auth.authenticated
+    ? 'Espace administrateur — connexion'
+    : editMode
+      ? 'Quitter le mode édition'
+      : 'Activer le mode édition';
+
+  const onLockClick = (e) => {
+    e.preventDefault();
+    if (auth.authenticated) {
+      setEditMode(!editMode);
+    } else {
+      setShowLogin(true);
+    }
+  };
+
+  const lockClass = [
+    'nav-icon-btn',
+    auth.authenticated ? 'is-admin-loggedin' : '',
+    editMode ? 'is-admin-on' : '',
+  ].filter(Boolean).join(' ');
+
   return (
     <nav className={`nav ${dark ? 'is-dark' : ''}`}>
       <a href="#home" onClick={e => { e.preventDefault(); onNav('home'); }} className="nav-brand">
@@ -26,20 +50,22 @@ export default function Nav({ active, onNav, dark }) {
         ))}
       </div>
       <div className="nav-icons">
+        <button
+          type="button"
+          className={lockClass}
+          onClick={onLockClick}
+          title={lockTitle}
+          aria-label={lockTitle}
+          style={{ position: 'relative' }}
+        ><Icon name="lock" size={16}/></button>
         <a className="nav-icon-btn"
-           href={UP_DATA.contact.intranet}
-           target="_blank" rel="noopener noreferrer"
-           title="Espace intranet"
-           aria-label="Espace intranet"
-        ><Icon name="lock" size={16}/></a>
-        <a className="nav-icon-btn"
-           href={UP_DATA.contact.linkedin}
+           href={data.contact?.linkedin || '#'}
            target="_blank" rel="noopener noreferrer"
            title="LinkedIn"
            aria-label="Page LinkedIn"
         ><Icon name="linkedin" size={16}/></a>
         <a className="nav-icon-btn"
-           href={`mailto:${UP_DATA.contact.email}`}
+           href={`mailto:${data.contact?.email || ''}`}
            title="Nous écrire"
            aria-label="Envoyer un email"
         ><Icon name="mail" size={16}/></a>

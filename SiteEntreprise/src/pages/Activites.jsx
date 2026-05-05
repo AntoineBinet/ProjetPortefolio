@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Icon from '../components/Icon';
-import { UP_DATA } from '../data';
+import { useContent } from '../admin/AdminContext';
+import { Editable, EditableImage } from '../admin/Editable';
 import sectorAuto from '../assets/sector-auto.png';
 import sectorAero from '../assets/sector-aero.png';
 import sectorEnergie from '../assets/sector-energie.jpg';
@@ -16,36 +17,36 @@ const sectorPhoto = {
 };
 
 export default function Activites() {
+  const c = useContent();
+  const sectors = c.secteurs || [];
+  const sectorContent = c.sectorContent || {};
+  const metiers = c.metiers || [];
+  const intervention = c.intervention || [];
+  const intro = c.activitesIntro || {};
+
   const [active, setActive] = useState(0);
   const [activeMetier, setActiveMetier] = useState(null);
-  const sectors = UP_DATA.secteurs;
-  const c = UP_DATA.sectorContent[sectors[active].key];
-  const photo = sectorPhoto[sectors[active].key];
-  const metiers = UP_DATA.metiers;
+
+  const currentSector = sectors[active] || {};
+  const currentSectorContent = sectorContent[currentSector.key] || { kpi: '', kpiLabel: '', products: [], activities: [] };
+  const photo = sectorPhoto[currentSector.key];
   const metierFocus = activeMetier !== null ? metiers[activeMetier] : null;
 
   return (
     <section className="a-section" id="activites">
       <div className="container a-head">
-        <div className="kicker">Activités · 7 métiers · 5 secteurs</div>
-        <h2 className="display">
-          Les <em>domaines</em> dans<br/>lesquels nous apportons<br/>notre expertise.
-        </h2>
-        <p className="lead">
-          Bureau d'études et conseil en ingénierie&nbsp;: Up Technologies couvre la chaîne complète
-          de l'électronique, de l'informatique embarquée et des systèmes mécatroniques —
-          en assistance technique, en forfait/workpackage ou en innovation.
-        </p>
+        <Editable as="div" className="kicker" path="activitesIntro.kicker" />
+        <Editable as="h2" className="display" path="activitesIntro.titleHtml" html />
+        <Editable as="p" className="lead" path="activitesIntro.lead" multiline />
       </div>
 
-      {/* Bloc "Notre intervention" — 3 modes (PDF §7.1) */}
       <div className="container a-intervention">
-        {UP_DATA.intervention.map((it, i) => (
+        {intervention.map((it, i) => (
           <article className="a-int-card" key={i} style={{ '--i': i }}>
             <div className="a-int-icon"><Icon name={it.icon} size={28} stroke="#EF8827"/></div>
-            <div className="a-int-num">{String(i + 1).padStart(2, '0')} / 03</div>
-            <h3>{it.title}</h3>
-            <p>{it.text}</p>
+            <div className="a-int-num">{String(i + 1).padStart(2, '0')} / 0{intervention.length}</div>
+            <Editable as="h3" path={`intervention.${i}.title`} />
+            <Editable as="p" path={`intervention.${i}.text`} multiline />
           </article>
         ))}
       </div>
@@ -57,7 +58,7 @@ export default function Activites() {
         >
           <div className={`a-orbit-core ${metierFocus ? 'a-orbit-core--detail' : ''}`}>
             <div className="a-orbit-core-idle" aria-hidden={!!metierFocus}>
-              <span className="a-orbit-eyebrow">7 métiers</span>
+              <span className="a-orbit-eyebrow">{metiers.length} métiers</span>
               <span className="a-orbit-label">Ingénierie<br/>complète</span>
               <span className="a-orbit-hint">Survolez un métier</span>
             </div>
@@ -68,14 +69,15 @@ export default function Activites() {
                     <Icon name={metierFocus.icon} size={26} stroke="#EF8827"/>
                   </div>
                   <div className="a-orbit-detail-num">
-                    {String(activeMetier + 1).padStart(2, '0')} / 07
+                    {String(activeMetier + 1).padStart(2, '0')} / {String(metiers.length).padStart(2, '0')}
                   </div>
-                  <h3 className="a-orbit-detail-title">{metierFocus.name}</h3>
-                  <p className="a-orbit-detail-desc">{metierFocus.description}</p>
+                  <Editable as="h3" className="a-orbit-detail-title" path={`metiers.${activeMetier}.name`} />
+                  <Editable as="p" className="a-orbit-detail-desc" path={`metiers.${activeMetier}.description`} multiline />
                   <ul className="a-orbit-detail-list">
-                    {metierFocus.examples.map((ex, i) => (
-                      <li key={ex} style={{ '--d': `${0.08 + i * 0.05}s` }}>
-                        <span className="a-orbit-detail-bullet"/>{ex}
+                    {(metierFocus.examples || []).map((ex, i) => (
+                      <li key={i} style={{ '--d': `${0.08 + i * 0.05}s` }}>
+                        <span className="a-orbit-detail-bullet"/>
+                        <Editable path={`metiers.${activeMetier}.examples.${i}`} />
                       </li>
                     ))}
                   </ul>
@@ -93,7 +95,7 @@ export default function Activites() {
             const isActive = activeMetier === i;
             return (
               <button
-                key={m.name}
+                key={`${m.name}-${i}`}
                 type="button"
                 className={`a-orbit-chip ${isActive ? 'a-orbit-chip--active' : ''} ${activeMetier !== null && !isActive ? 'a-orbit-chip--dim' : ''}`}
                 style={{ left: `${x}%`, top: `${y}%`, '--d': `${i * 0.08}s` }}
@@ -111,10 +113,10 @@ export default function Activites() {
           })}
         </div>
 
-        {/* Mobile : grid d'expandable cards (l'orbit serait illisible) */}
+        {/* Mobile : grid d'expandable cards */}
         <div className="a-metiers-grid">
           {metiers.map((m, i) => (
-            <details key={m.name} className="a-metier-card" style={{ '--d': `${i * 0.05}s` }}>
+            <details key={`${m.name}-${i}`} className="a-metier-card" style={{ '--d': `${i * 0.05}s` }}>
               <summary>
                 <span className="a-metier-card-icon"><Icon name={m.icon} size={18} stroke="#EF8827"/></span>
                 <span className="a-metier-card-num">{String(i + 1).padStart(2, '0')}</span>
@@ -122,10 +124,13 @@ export default function Activites() {
                 <span className="a-metier-card-chev" aria-hidden="true">+</span>
               </summary>
               <div className="a-metier-card-body">
-                <p>{m.description}</p>
+                <Editable as="p" path={`metiers.${i}.description`} multiline />
                 <ul>
-                  {m.examples.map((ex) => (
-                    <li key={ex}><span className="a-orbit-detail-bullet"/>{ex}</li>
+                  {(m.examples || []).map((ex, j) => (
+                    <li key={j}>
+                      <span className="a-orbit-detail-bullet"/>
+                      <Editable path={`metiers.${i}.examples.${j}`} />
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -138,39 +143,45 @@ export default function Activites() {
         <div className="container a-split">
           <aside className="a-split-aside">
             <div className="kicker">Secteurs</div>
-            <h3 className="a-split-title">5 industries que<br/>nous comprenons<br/>de l'intérieur.</h3>
+            <Editable as="h3" className="a-split-title" path="activitesIntro.splitTitleHtml" html />
             <div className="a-tabs">
               {sectors.map((s, i) => (
-                <button key={s.key} className={`a-tab ${i === active ? 'active' : ''}`} onClick={() => setActive(i)}>
+                <button key={`${s.key}-${i}`} className={`a-tab ${i === active ? 'active' : ''}`} onClick={() => setActive(i)}>
                   <span className="a-tab-num">{String(i + 1).padStart(2, '0')}</span>
                   <span className="a-tab-label">{s.label}</span>
                   <span className="a-tab-line"/>
                 </button>
               ))}
             </div>
-            <p className="a-split-tagline">{sectors[active].tagline}</p>
+            <Editable as="p" className="a-split-tagline" path={`secteurs.${active}.tagline`} />
           </aside>
           <div className="a-split-main">
             <div className="a-vis">
               <div className="a-vis-inner" key={active}>
                 {photo && (
-                  <img src={photo} alt={sectors[active].label} className="a-vis-photo"/>
+                  <EditableImage
+                    src={photo}
+                    alt={currentSector.label}
+                    className="a-vis-photo"
+                    path={`sectorPhoto.${currentSector.key}`}
+                  />
                 )}
                 <div className="a-vis-bg" />
                 <div className="a-vis-kpi">
-                  <span className="a-vis-num">{c.kpi}</span>
-                  <span className="a-vis-num-label">{c.kpiLabel}</span>
+                  <Editable as="span" className="a-vis-num" path={`sectorContent.${currentSector.key}.kpi`} />
+                  <Editable as="span" className="a-vis-num-label" path={`sectorContent.${currentSector.key}.kpiLabel`} />
                 </div>
-                <span className="a-vis-mono">{'/* ' + sectors[active].label + ' */'}</span>
+                <span className="a-vis-mono">{'/* ' + currentSector.label + ' */'}</span>
               </div>
             </div>
             <div className="a-cols" key={`cols-${active}`}>
               <div>
                 <div className="a-col-title">Produits & systèmes</div>
                 <ul className="a-col-list">
-                  {c.products.map((p, i) => (
+                  {(currentSectorContent.products || []).map((p, i) => (
                     <li key={i} style={{ '--d': `${i * 0.06}s` }}>
-                      <span className="a-bullet"/>{p}
+                      <span className="a-bullet"/>
+                      <Editable path={`sectorContent.${currentSector.key}.products.${i}`} />
                     </li>
                   ))}
                 </ul>
@@ -178,9 +189,10 @@ export default function Activites() {
               <div>
                 <div className="a-col-title">Activités</div>
                 <ul className="a-col-list">
-                  {c.activities.map((p, i) => (
+                  {(currentSectorContent.activities || []).map((p, i) => (
                     <li key={i} style={{ '--d': `${i * 0.06}s` }}>
-                      <span className="a-bullet a-bullet-fill"/>{p}
+                      <span className="a-bullet a-bullet-fill"/>
+                      <Editable path={`sectorContent.${currentSector.key}.activities.${i}`} />
                     </li>
                   ))}
                 </ul>

@@ -1,10 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import PointCloud from '../components/PointCloud';
 import Icon from '../components/Icon';
-import { UP_DATA } from '../data';
+import { useContent } from '../admin/AdminContext';
+import { Editable } from '../admin/Editable';
 
 export default function Hero({ tweaks }) {
-  const words = UP_DATA.rotatingWords;
+  const data = useContent();
+  const words = data.rotatingWords || [];
+  const stats = data.hero?.stats || [];
+  const contact = data.contact || {};
+  const hero = data.hero || {};
+
   const [idx, setIdx] = useState(0);
 
   const eyebrowRef = useRef(null);
@@ -12,13 +18,13 @@ export default function Hero({ tweaks }) {
   const subRef = useRef(null);
   const ctaRef = useRef(null);
   const statsRef = useRef(null);
-  // Stable array reference so PointCloud doesn't re-init on each render.
   const textRefs = useMemo(
     () => [eyebrowRef, titleRef, subRef, ctaRef, statsRef],
     [],
   );
 
   useEffect(() => {
+    if (!words.length) return;
     const id = setInterval(() => setIdx(i => (i + 1) % words.length), 3000);
     return () => clearInterval(id);
   }, [words.length]);
@@ -36,32 +42,39 @@ export default function Hero({ tweaks }) {
       <div className="hero-grain" />
       <div className="hero-content">
         <div className="hero-eyebrow" ref={eyebrowRef}>
-          <span className="dot" /> Conseil en ingénierie · électronique · informatique embarquée · mécatronique
+          <span className="dot" /> <Editable path="hero.eyebrow" />
         </div>
         <h1 className="hero-title" ref={titleRef}>
-          <span className="hero-light">What's Up ?</span>
+          <Editable as="span" className="hero-light" path="hero.titleLight" />
           <span className="hero-rotator">
             {words.map((w, i) => (
-              <span key={w} className={`word ${i === idx ? 'active' : ''}`}>{w}</span>
+              <Editable
+                key={`${w}-${i}`}
+                as="span"
+                className={`word ${i === idx ? 'active' : ''}`}
+                path={`rotatingWords.${i}`}
+              />
             ))}
           </span>
         </h1>
         <p className="hero-sub" ref={subRef}>
-          UP TECHNOLOGIES&nbsp;! Société de conseil en ingénierie et bureau d'études
-          en électronique, informatique embarquée, et systèmes mécatroniques.
-          6 agences en France, 5 secteurs industriels.
+          <Editable path="hero.sub" multiline html />
         </p>
         <div className="hero-cta" ref={ctaRef}>
           <a className="btn btn-primary" href="#carriere">
-            Découvrir nos opportunités <Icon name="arrow" size={16}/>
+            <Editable path="hero.ctaPrimary" /> <Icon name="arrow" size={16}/>
           </a>
-          <a className="btn btn-ghost" href={`mailto:${UP_DATA.contact.email}`}>Nous contacter</a>
+          <a className="btn btn-ghost" href={`mailto:${contact.email || ''}`}>
+            <Editable path="hero.ctaSecondary" />
+          </a>
         </div>
         <div className="hero-stats" ref={statsRef}>
-          <div><strong>6</strong><span>agences en France</span></div>
-          <div><strong>5</strong><span>secteurs industriels</span></div>
-          <div><strong>3</strong><span>certifications ISO</span></div>
-          <div><strong>CIR</strong><span>agrément recherche</span></div>
+          {stats.map((s, i) => (
+            <div key={i}>
+              <Editable as="strong" path={`hero.stats.${i}.value`} />
+              <Editable as="span" path={`hero.stats.${i}.label`} />
+            </div>
+          ))}
         </div>
       </div>
       <button
