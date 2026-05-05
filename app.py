@@ -87,24 +87,6 @@ app.secret_key = SECRET_KEY
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
-DEMO_UP_HOST = "demo-up.marienour.work"
-
-
-@app.before_request
-def _route_demo_up_host_to_site_entreprise():
-    # Le tunnel Cloudflare envoie demo-up.marienour.work vers ce même Flask.
-    # On réécrit le PATH_INFO pour servir SiteEntreprise/dist à la racine sans
-    # redirection visible — l'URL reste demo-up.marienour.work/... dans la barre.
-    host = (request.host or "").split(":")[0].lower()
-    if host != DEMO_UP_HOST:
-        return None
-    path = request.environ.get("PATH_INFO", "/") or "/"
-    if path.startswith("/site-entreprise"):
-        return None
-    request.environ["PATH_INFO"] = "/site-entreprise" + (path if path != "/" else "/")
-    return None
-
-
 @app.before_request
 def _isolate_portfolio_from_casino_users():
     p = request.path
