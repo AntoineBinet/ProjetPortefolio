@@ -173,6 +173,15 @@ export function AdminProvider({ children }) {
     setEditMode(false);
   }, []);
 
+  // Reflète l'état édition sur <body> pour permettre aux CSS de réagir
+  // (afficher les contrôles +/-, défaire le dim sur les images, etc.).
+  useEffect(() => {
+    const isEditing = editMode && auth.authenticated;
+    if (isEditing) document.body.setAttribute('data-edit-mode', 'on');
+    else document.body.removeAttribute('data-edit-mode');
+    return () => document.body.removeAttribute('data-edit-mode');
+  }, [editMode, auth.authenticated]);
+
   const changePassword = useCallback(async (oldPassword, newPassword) => {
     try {
       const r = await fetch(`${API}/auth/change-password`, {

@@ -1,10 +1,16 @@
 import Icon from '../components/Icon';
 import { useContent } from '../admin/AdminContext';
-import { Editable, EditableImage } from '../admin/Editable';
+import { Editable, EditableImage, NavGuardLink } from '../admin/Editable';
+import { ListControls } from '../admin/AdminToolbar';
 import followUpImg from '../assets/car-follow-up.jpg';
 import careerAheadImg from '../assets/car-career-ahead.jpg';
 import smartImg from '../assets/car-smart.jpg';
 import cvImg from '../assets/car-cv.jpg';
+
+const pourquoiPointTemplate = () => 'Nouveau point fort.';
+const avantageTemplate = () => ({ title: 'Nouvel avantage', text: 'Description de l\'avantage.' });
+const contrepartieTemplate = () => ({ title: 'Nouvelle contrepartie', text: 'Description de la contrepartie.' });
+const questionTemplate = () => 'Nouvelle question à se poser ?';
 
 export default function Carriere() {
   const data = useContent();
@@ -57,8 +63,10 @@ export default function Carriere() {
               <li key={i}>
                 <span className="c-pq-marker"/>
                 <Editable as="span" path={`carriere.pourquoi.points.${i}`} />
+                <ListControls path="carriere.pourquoi.points" index={i} template={pourquoiPointTemplate} />
               </li>
             ))}
+            <li><ListControls path="carriere.pourquoi.points" template={pourquoiPointTemplate} /></li>
           </ul>
           <figure className="c-figure">
             <EditableImage src={careerAheadImg} alt="Career Ahead — panneau ciel" path="carriere.pourquoi.image" />
@@ -98,8 +106,10 @@ export default function Carriere() {
                     <span>+</span>
                     <span className="c-card-meta">avantage</span>
                   </div>
+                  <ListControls path="carriere.metier.avantages" index={i} template={avantageTemplate} />
                 </div>
               ))}
+              <div className="c-card-add"><ListControls path="carriere.metier.avantages" template={avantageTemplate} /></div>
             </div>
           </div>
           <div className="c-twocol-side c-twocol-neg">
@@ -115,8 +125,10 @@ export default function Carriere() {
                     <span>−</span>
                     <span className="c-card-meta">contrepartie</span>
                   </div>
+                  <ListControls path="carriere.metier.contreparties" index={i} template={contrepartieTemplate} />
                 </div>
               ))}
+              <div className="c-card-add"><ListControls path="carriere.metier.contreparties" template={contrepartieTemplate} /></div>
             </div>
           </div>
         </div>
@@ -138,20 +150,22 @@ export default function Carriere() {
               <figcaption>Définir ton projet pro</figcaption>
             </figure>
             <Editable as="p" className="c-q-intro" path="carriere.rejoindre.intro" multiline />
-            <a className="btn btn-primary" href={`mailto:${contact.email || ''}?subject=Candidature spontanée`}>
+            <NavGuardLink className="btn btn-primary" href={`mailto:${contact.email || ''}?subject=Candidature spontanée`}>
               Candidater par mail <Icon name="arrow" size={16}/>
-            </a>
-            <a className="btn btn-ghost" href={contact.linkedinJobs || '#'} target="_blank" rel="noopener noreferrer">
+            </NavGuardLink>
+            <NavGuardLink className="btn btn-ghost" href={contact.linkedinJobs || '#'} target="_blank" rel="noopener noreferrer">
               <Icon name="linkedin" size={14}/> Voir nos offres LinkedIn
-            </a>
+            </NavGuardLink>
           </div>
           <ol className="c-q-list">
             {(c.rejoindre?.questions || []).map((q, i) => (
               <li key={i}>
                 <span className="c-q-num">/{String(i + 1).padStart(2, '0')}</span>
                 <Editable as="span" className="c-q-text" path={`carriere.rejoindre.questions.${i}`} />
+                <ListControls path="carriere.rejoindre.questions" index={i} template={questionTemplate} />
               </li>
             ))}
+            <li><ListControls path="carriere.rejoindre.questions" template={questionTemplate} /></li>
           </ol>
         </div>
       </div>

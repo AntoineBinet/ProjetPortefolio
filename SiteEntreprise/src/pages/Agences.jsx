@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import Icon from '../components/Icon';
 import { useContent } from '../admin/AdminContext';
-import { Editable, EditableImage } from '../admin/Editable';
+import { Editable, EditableImage, EditableLink } from '../admin/Editable';
+import { ListControls } from '../admin/AdminToolbar';
 import agency1 from '../assets/agency-1.jpg';
 import agency2 from '../assets/agency-2.jpg';
 import agency3 from '../assets/agency-3.png';
@@ -76,6 +77,16 @@ const labelMap = {
   'Toulon':          { side: 'right', dy: 2.0 },
   'Nice Sophia':     { side: 'left',  dy: -1.6 },
 };
+
+const agenceTemplate = () => ({
+  ville: 'Nouvelle ville',
+  adresse: 'Adresse à compléter',
+  cp: '00000',
+  pays: 'France',
+  founded: 2026,
+  lat: 46.6,
+  lng: 2.5,
+});
 
 export default function Agences() {
   const c = useContent();
@@ -270,20 +281,23 @@ export default function Agences() {
           </div>
           <div className="g-list">
             {data.map((d, i) => (
-              <button
-                key={`${d.ville}-list-${i}`}
-                type="button"
-                className={`g-row ${i === safeHover ? 'active' : ''}`}
-                onMouseEnter={() => setHover(i)}
-                onFocus={() => setHover(i)}
-                onClick={() => setHover(i)}
-              >
-                <span className="g-row-num">{String(i + 1).padStart(2, '0')}</span>
-                <span className="g-row-ville">{d.ville}</span>
-                <span className="g-row-year">{d.founded}</span>
-                <span className="g-row-arrow"><Icon name="arrow" size={14}/></span>
-              </button>
+              <div key={`${d.ville}-list-${i}`} className="g-row-wrap">
+                <button
+                  type="button"
+                  className={`g-row ${i === safeHover ? 'active' : ''}`}
+                  onMouseEnter={() => setHover(i)}
+                  onFocus={() => setHover(i)}
+                  onClick={() => setHover(i)}
+                >
+                  <span className="g-row-num">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="g-row-ville">{d.ville}</span>
+                  <span className="g-row-year">{d.founded}</span>
+                  <span className="g-row-arrow"><Icon name="arrow" size={14}/></span>
+                </button>
+                <ListControls path="agences" index={i} template={agenceTemplate} />
+              </div>
             ))}
+            <div className="g-row-add"><ListControls path="agences" template={agenceTemplate} /></div>
           </div>
 
           <div className="g-detail" key={safeHover}>
@@ -325,18 +339,18 @@ export default function Agences() {
             <Editable as="p" className="g-contact-baseline" path="contactBlock.baseline" multiline />
           </div>
           <div className="g-contact-actions">
-            <a className="g-contact-link" href={`mailto:${contact.email || ''}`}>
+            <EditableLink path="contact.emailHref" href={`mailto:${contact.email || ''}`} className="g-contact-link">
               <span>Mail</span>
               <strong><Editable path="contact.email" /></strong>
-            </a>
-            <a className="g-contact-link" href={contact.telHref || '#'}>
+            </EditableLink>
+            <EditableLink path="contact.telHref" href={contact.telHref || '#'} className="g-contact-link">
               <span>Téléphone</span>
               <strong><Editable path="contact.tel" /></strong>
-            </a>
-            <a className="g-contact-link" href={contact.linkedin || '#'} target="_blank" rel="noopener noreferrer">
+            </EditableLink>
+            <EditableLink path="contact.linkedin" href={contact.linkedin || '#'} target="_blank" rel="noopener noreferrer" className="g-contact-link">
               <span>LinkedIn</span>
               <strong>/company/up-technologies</strong>
-            </a>
+            </EditableLink>
           </div>
         </div>
       </div>

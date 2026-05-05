@@ -1,12 +1,15 @@
 import CertBadge from '../components/CertBadge';
 import { useContent } from '../admin/AdminContext';
-import { Editable } from '../admin/Editable';
+import { Editable, EditableLink } from '../admin/Editable';
+import { ListControls } from '../admin/AdminToolbar';
+
+const docTemplate = () => ({ label: 'Nouveau document', ref: 'Référence', url: '#', kind: 'doc' });
+const certTemplate = () => ({ kind: 'iso-9001', name: 'Nouvelle certification', desc: 'Description courte', year: '2026' });
 
 export default function Qualite() {
   const c = useContent();
   const docs = c.documents || [];
   const certs = c.certifications || [];
-  const intro = c.qualiteIntro || {};
 
   return (
     <section className="q-section" id="qualite">
@@ -26,21 +29,25 @@ export default function Qualite() {
           <div className="q-docs">
             <Editable as="div" className="q-docs-title" path="qualiteIntro.docsTitle" />
             {docs.map((d, i) => (
-              <a
-                key={i}
-                href={d.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`q-link q-link-${d.kind}`}
-              >
-                <span className="q-link-arrow">↓</span>
-                <span className="q-link-label">
-                  <Editable path={`documents.${i}.label`} />
-                  <Editable as="span" className="q-link-ref" path={`documents.${i}.ref`} />
-                </span>
-                <span className="q-link-meta">PDF</span>
-              </a>
+              <div key={i} className="q-doc-row">
+                <EditableLink
+                  path={`documents.${i}.url`}
+                  href={d.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`q-link q-link-${d.kind}`}
+                >
+                  <span className="q-link-arrow">↓</span>
+                  <span className="q-link-label">
+                    <Editable path={`documents.${i}.label`} />
+                    <Editable as="span" className="q-link-ref" path={`documents.${i}.ref`} />
+                  </span>
+                  <span className="q-link-meta">PDF</span>
+                </EditableLink>
+                <ListControls path="documents" index={i} template={docTemplate} />
+              </div>
             ))}
+            <ListControls path="documents" template={docTemplate} />
           </div>
         </div>
         <div className="q-stack">
@@ -54,9 +61,13 @@ export default function Qualite() {
                 <div className="q-badge-status">
                   <span className="q-badge-dot"/> active · <Editable path={`certifications.${i}.year`} />
                 </div>
+                <ListControls path="certifications" index={i} template={certTemplate} />
               </div>
             </div>
           ))}
+          <div className="q-badge-add-wrap">
+            <ListControls path="certifications" template={certTemplate} />
+          </div>
         </div>
       </div>
     </section>

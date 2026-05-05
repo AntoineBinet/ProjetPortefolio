@@ -2,6 +2,85 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useAdmin, useEditable, getByPath } from './AdminContext';
 
 /**
+ * Lien éditable : en mode lecture, c'est un simple <a>. En mode admin, le
+ * survol affiche un petit bouton "✎ URL" qui ouvre un prompt pour modifier
+ * l'href stocké à `path`. Le clic sur le lien est intercepté pour ne pas
+ * naviguer en mode édition.
+ *
+ * Props supplémentaires par rapport à <a> :
+ *   - path        : chemin où stocker l'URL (ex "documents.0.url")
+ *   - children    : rendu intérieur (label, icône, etc.)
+ *   - placeholder : URL par défaut si vide ("#" en lecture, label "URL" en édition)
+ */
+export function EditableLink({ path, children, href, className = '', onClick, target, rel, ...rest }) {
+  const { content, setField } = useAdmin();
+  const isEdit = useEditable();
+  const stored = path ? getByPath(content, path) : undefined;
+  const url = stored ?? href ?? '#';
+
+  const onEditUrl = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!path) return;
+    const next = window.prompt('URL du lien (laisser vide pour #) :', url || '');
+    if (next === null) return;
+    setField(path, next.trim() || '#');
+  }, [path, url, setField]);
+
+  const handleClick = useCallback((e) => {
+    if (isEdit) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    onClick?.(e);
+  }, [isEdit, onClick]);
+
+  const cls = `${className} ${isEdit ? 'ed-link' : ''}`.trim();
+
+  return (
+    <a
+      href={url}
+      target={target}
+      rel={rel}
+      className={cls}
+      onClick={handleClick}
+      data-ed-link-path={path}
+      {...rest}
+    >
+      {children}
+      {isEdit && path && (
+        <button
+          type="button"
+          className="ed-link-edit"
+          onClick={onEditUrl}
+          title={`Modifier l'URL${url ? ' — ' + url : ''}`}
+          aria-label="Modifier l'URL du lien"
+        >✎</button>
+      )}
+    </a>
+  );
+}
+
+/**
+ * Wrapper pour bloquer la navigation d'un <a> hôte en mode édition (sans
+ * permettre l'édition de l'URL — utile pour les ancres internes ou les liens
+ * dont l'URL est calculée et non stockée dans content.json).
+ */
+export function NavGuardLink({ children, onClick, className = '', ...rest }) {
+  const isEdit = useEditable();
+  const handleClick = useCallback((e) => {
+    if (isEdit) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    onClick?.(e);
+  }, [isEdit, onClick]);
+  return <a {...rest} className={className} onClick={handleClick}>{children}</a>;
+}
+
+/**
  * <Editable as="h1" path="hero.titleLight">
  *   - Lecture : rendu simple (texte brut OU dangerouslySetInnerHTML si html=true).
  *   - Mode édition : élément contentEditable, save sur blur.

@@ -2,7 +2,11 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import PointCloud from '../components/PointCloud';
 import Icon from '../components/Icon';
 import { useContent } from '../admin/AdminContext';
-import { Editable } from '../admin/Editable';
+import { Editable, NavGuardLink } from '../admin/Editable';
+import { ListControls } from '../admin/AdminToolbar';
+
+const statTemplate = () => ({ value: '0', label: 'Nouveau KPI' });
+const wordTemplate = () => 'mot';
 
 export default function Hero({ tweaks }) {
   const data = useContent();
@@ -57,24 +61,38 @@ export default function Hero({ tweaks }) {
             ))}
           </span>
         </h1>
+        {/* Panneau admin : édition de la liste de mots rotatifs (visible
+            uniquement en mode édition via CSS [data-edit-mode]). */}
+        <div className="hero-words-edit" aria-hidden="true">
+          <span className="hero-words-edit-label">Mots rotatifs :</span>
+          {words.map((w, i) => (
+            <span key={`w-${i}`} className="hero-words-chip">
+              <Editable as="span" path={`rotatingWords.${i}`} />
+              <ListControls path="rotatingWords" index={i} template={wordTemplate} />
+            </span>
+          ))}
+          <ListControls path="rotatingWords" template={wordTemplate} />
+        </div>
         <p className="hero-sub" ref={subRef}>
           <Editable path="hero.sub" multiline html />
         </p>
         <div className="hero-cta" ref={ctaRef}>
-          <a className="btn btn-primary" href="#carriere">
+          <NavGuardLink className="btn btn-primary" href="#carriere">
             <Editable path="hero.ctaPrimary" /> <Icon name="arrow" size={16}/>
-          </a>
-          <a className="btn btn-ghost" href={`mailto:${contact.email || ''}`}>
+          </NavGuardLink>
+          <NavGuardLink className="btn btn-ghost" href={`mailto:${contact.email || ''}`}>
             <Editable path="hero.ctaSecondary" />
-          </a>
+          </NavGuardLink>
         </div>
         <div className="hero-stats" ref={statsRef}>
           {stats.map((s, i) => (
-            <div key={i}>
+            <div key={i} className="hero-stat-wrap">
               <Editable as="strong" path={`hero.stats.${i}.value`} />
               <Editable as="span" path={`hero.stats.${i}.label`} />
+              <ListControls path="hero.stats" index={i} template={statTemplate} />
             </div>
           ))}
+          <div className="hero-stat-add"><ListControls path="hero.stats" template={statTemplate} /></div>
         </div>
       </div>
       <button

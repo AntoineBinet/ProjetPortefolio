@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import Icon from '../components/Icon';
 import { useContent } from '../admin/AdminContext';
-import { Editable, EditableImage } from '../admin/Editable';
+import { Editable, EditableImage, EditableLink } from '../admin/Editable';
+import { ListControls } from '../admin/AdminToolbar';
 import medaille from '../assets/post-medaille.png';
 import electronique from '../assets/post-electronique.png';
 import defi from '../assets/post-power-up-defi.png';
@@ -17,19 +18,26 @@ const covers = { medaille, electronique, defi, certif2x, env, sophia, noel, gren
 
 const SITE = 'https://up-technologies.fr';
 
-function articleUrl(slug) {
-  return `${SITE}/actualites/`;
-}
+const articleTemplate = () => ({
+  slug: `article-${Date.now()}`,
+  cover: 'medaille',
+  tag: 'À la une',
+  date: new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }),
+  title: 'Nouveau titre',
+  excerpt: 'Description courte de l\'article — clique pour modifier.',
+  url: SITE + '/actualites/',
+});
 
 export default function Actualites() {
   const c = useContent();
   const items = c.actualites || [];
   const [filter, setFilter] = useState('Tous');
-  const tags = ['Tous', ...Array.from(new Set(items.map(i => i.tag)))];
+  const tags = ['Tous', ...Array.from(new Set(items.map(i => i.tag).filter(Boolean)))];
   const list = filter === 'Tous' ? items : items.filter(i => i.tag === filter);
   const [feature, ...rest] = list;
   // index original utile pour les paths Editable
   const indexOf = (slug) => items.findIndex(it => it.slug === slug);
+  const articleHref = (n) => n.url || `${SITE}/actualites/`;
 
   return (
     <section className="n-section" id="actualites">
@@ -52,25 +60,34 @@ export default function Actualites() {
         const fi = indexOf(feature.slug);
         return (
           <div className="container">
-            <a href={articleUrl(feature.slug)} target="_blank" rel="noopener noreferrer" className="n-feature">
-              <div className="n-feature-img">
-                {covers[feature.cover] && (
-                  <EditableImage src={covers[feature.cover]} alt={feature.title} className="n-feature-photo" path={`actualites.${fi}.image`} />
-                )}
-                <Editable as="span" className="n-feature-tag" path={`actualites.${fi}.tag`} />
-                <span className="n-feature-edition">Édition #{items.length}</span>
-              </div>
-              <div className="n-feature-body">
-                <div className="n-feature-meta">
-                  <span>À LA UNE</span>
-                  <span>·</span>
-                  <Editable as="span" path={`actualites.${fi}.date`} />
+            <div className="n-feature-wrap">
+              <EditableLink
+                path={`actualites.${fi}.url`}
+                href={articleHref(feature)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="n-feature"
+              >
+                <div className="n-feature-img">
+                  {covers[feature.cover] && (
+                    <EditableImage src={covers[feature.cover]} alt={feature.title} className="n-feature-photo" path={`actualites.${fi}.image`} />
+                  )}
+                  <Editable as="span" className="n-feature-tag" path={`actualites.${fi}.tag`} />
+                  <span className="n-feature-edition">Édition #{items.length}</span>
                 </div>
-                <Editable as="h3" className="n-feature-title" path={`actualites.${fi}.title`} />
-                <Editable as="p" path={`actualites.${fi}.excerpt`} multiline />
-                <span className="n-feature-cta">Lire sur up-technologies.fr <Icon name="arrow" size={18}/></span>
-              </div>
-            </a>
+                <div className="n-feature-body">
+                  <div className="n-feature-meta">
+                    <span>À LA UNE</span>
+                    <span>·</span>
+                    <Editable as="span" path={`actualites.${fi}.date`} />
+                  </div>
+                  <Editable as="h3" className="n-feature-title" path={`actualites.${fi}.title`} />
+                  <Editable as="p" path={`actualites.${fi}.excerpt`} multiline />
+                  <span className="n-feature-cta">Lire <Icon name="arrow" size={18}/></span>
+                </div>
+              </EditableLink>
+              <ListControls path="actualites" index={fi} template={articleTemplate} />
+            </div>
           </div>
         );
       })()}
@@ -80,26 +97,38 @@ export default function Actualites() {
           {rest.map((n) => {
             const i = indexOf(n.slug);
             return (
-              <a className="n-card" key={n.slug} href={articleUrl(n.slug)} target="_blank" rel="noopener noreferrer">
-                <div className="n-card-img">
-                  {covers[n.cover] ? (
-                    <EditableImage src={covers[n.cover]} alt={n.title} className="n-card-photo" path={`actualites.${i}.image`} />
-                  ) : (
-                    <div className={`n-pattern p-${(i + 1) % 4}`}/>
-                  )}
-                </div>
-                <div className="n-card-body">
-                  <div className="n-card-meta">
-                    <Editable as="span" className="n-card-tag" path={`actualites.${i}.tag`} />
-                    <Editable as="span" path={`actualites.${i}.date`} />
+              <div className="n-card-wrap" key={n.slug}>
+                <EditableLink
+                  path={`actualites.${i}.url`}
+                  href={articleHref(n)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="n-card"
+                >
+                  <div className="n-card-img">
+                    {covers[n.cover] ? (
+                      <EditableImage src={covers[n.cover]} alt={n.title} className="n-card-photo" path={`actualites.${i}.image`} />
+                    ) : (
+                      <div className={`n-pattern p-${(i + 1) % 4}`}/>
+                    )}
                   </div>
-                  <Editable as="h3" path={`actualites.${i}.title`} />
-                  <Editable as="p" path={`actualites.${i}.excerpt`} multiline />
-                  <span className="n-card-arrow">↗</span>
-                </div>
-              </a>
+                  <div className="n-card-body">
+                    <div className="n-card-meta">
+                      <Editable as="span" className="n-card-tag" path={`actualites.${i}.tag`} />
+                      <Editable as="span" path={`actualites.${i}.date`} />
+                    </div>
+                    <Editable as="h3" path={`actualites.${i}.title`} />
+                    <Editable as="p" path={`actualites.${i}.excerpt`} multiline />
+                    <span className="n-card-arrow">↗</span>
+                  </div>
+                </EditableLink>
+                <ListControls path="actualites" index={i} template={articleTemplate} />
+              </div>
             );
           })}
+          <div className="n-card-add-wrap">
+            <ListControls path="actualites" template={articleTemplate} />
+          </div>
         </div>
 
         <div className="n-foot">
