@@ -8,9 +8,14 @@ import { useRef, useEffect } from 'react';
    - opacité plus marquée au repos, spotlight orange au hover
 */
 
-export default function PointCloud({ density = 2.2, dark = false, repel = true }) {
+export default function PointCloud({ density = 2.2, dark = false, repel = true, repelTargets = [] }) {
   const canvasRef = useRef(null);
-  const stateRef = useRef({ points: [], mouse: { x: -9999, y: -9999, active: false }, raf: 0 });
+  const stateRef = useRef({
+    points: [],
+    mouse: { x: -9999, y: -9999, active: false },
+    rects: [],
+    raf: 0,
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -46,15 +51,39 @@ export default function PointCloud({ density = 2.2, dark = false, repel = true }
       });
     };
 
+    const computeRects = () => {
+      const rect = canvas.getBoundingClientRect();
+      const out = [];
+      for (const ref of repelTargets) {
+        const el = ref && ref.current;
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        // Padding around text so points don't graze the letters.
+        const pad = 18;
+        out.push({
+          x: r.left - rect.left - pad,
+          y: r.top  - rect.top  - pad,
+          w: r.width  + pad * 2,
+          h: r.height + pad * 2,
+        });
+      }
+      stateRef.current.rects = out;
+    };
+
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       w = rect.width; h = rect.height;
       canvas.width = w * dpr; canvas.height = h * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       initPoints();
+      computeRects();
     };
     resize();
     window.addEventListener('resize', resize);
+    // Recompute rects after fonts/layout settle, and on scroll inside the page.
+    const rectsTimer = setTimeout(computeRects, 250);
+    const rectsTimer2 = setTimeout(computeRects, 1200);
+    window.addEventListener('scroll', computeRects, { passive: true });
 
     const onMove = (e) => {
       const rect = canvas.getBoundingClientRect();
@@ -71,13 +100,14 @@ export default function PointCloud({ density = 2.2, dark = false, repel = true }
     window.addEventListener('mouseleave', onLeave);
 
     const tick = () => {
-      const { points, mouse } = stateRef.current;
+      const { points, mouse, rects } = stateRef.current;
       const now = performance.now();
       ctx.clearRect(0, 0, w, h);
 
       const mouseR = 180;
       const linkD = 185;
       const NEIGHBORS = 4; // chaque point ne se relie qu'à ses N plus proches voisins
+      const textReach = 90; // distance d'influence autour des zones de texte
 
       for (const p of points) {
         p.x += p.vx; p.y += p.vy;
@@ -89,22 +119,52 @@ export default function PointCloud({ density = 2.2, dark = false, repel = true }
         const fx = Math.sin(now * p.freqX + p.phaseX) * p.ampX;
         const fy = Math.cos(now * p.freqY + p.phaseY) * p.ampY;
 
+        let targetOx = fx, targetOy = fy;
+
         if (mouse.active) {
           const px = p.x + fx, py = p.y + fy;
           const dx = px - mouse.x, dy = py - mouse.y;
           const d = Math.sqrt(dx * dx + dy * dy);
           if (d < mouseR && d > 0.001) {
             const f = (1 - d / mouseR) * (repel ? 1 : -1) * 0.7;
-            p.ox = fx + (dx / d) * f * 22;
-            p.oy = fy + (dy / d) * f * 22;
-          } else {
-            p.ox = p.ox * 0.88 + fx * 0.12;
-            p.oy = p.oy * 0.88 + fy * 0.12;
+            targetOx = fx + (dx / d) * f * 22;
+            targetOy = fy + (dy / d) * f * 22;
           }
-        } else {
-          p.ox = p.ox * 0.88 + fx * 0.12;
-          p.oy = p.oy * 0.88 + fy * 0.12;
         }
+
+        // Repel away from text rectangles. Same logic as the mouse:
+        // find the closest point on the rect, push outward if within reach.
+        if (rects.length) {
+          const px = p.x, py = p.y;
+          for (const r of rects) {
+            const cx = Math.max(r.x, Math.min(px, r.x + r.w));
+            const cy = Math.max(r.y, Math.min(py, r.y + r.h));
+            const dx = px - cx, dy = py - cy;
+            let d = Math.sqrt(dx * dx + dy * dy);
+            if (d < textReach) {
+              let nx, ny;
+              if (d > 0.001) {
+                nx = dx / d; ny = dy / d;
+              } else {
+                // Inside the rect: push toward the nearest edge.
+                const left = px - r.x, right = (r.x + r.w) - px;
+                const top = py - r.y, bottom = (r.y + r.h) - py;
+                const m = Math.min(left, right, top, bottom);
+                if (m === left) { nx = -1; ny = 0; }
+                else if (m === right) { nx = 1; ny = 0; }
+                else if (m === top) { nx = 0; ny = -1; }
+                else { nx = 0; ny = 1; }
+                d = 0.001;
+              }
+              const f = (1 - Math.min(1, d / textReach)) * 1.0;
+              targetOx += nx * f * 28;
+              targetOy += ny * f * 28;
+            }
+          }
+        }
+
+        p.ox = p.ox * 0.85 + targetOx * 0.15;
+        p.oy = p.oy * 0.85 + targetOy * 0.15;
       }
 
       const lineColor = dark ? 'rgba(239,136,39,' : 'rgba(17,32,42,';
@@ -215,11 +275,14 @@ export default function PointCloud({ density = 2.2, dark = false, repel = true }
 
     return () => {
       cancelAnimationFrame(stateRef.current.raf);
+      clearTimeout(rectsTimer);
+      clearTimeout(rectsTimer2);
       window.removeEventListener('resize', resize);
+      window.removeEventListener('scroll', computeRects);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseleave', onLeave);
     };
-  }, [density, dark, repel]);
+  }, [density, dark, repel, repelTargets]);
 
   return (
     <canvas
