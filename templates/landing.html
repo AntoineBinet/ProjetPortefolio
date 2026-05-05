@@ -71,7 +71,8 @@
       <div class="project-mockup">
         <div class="accent-halo" aria-hidden="true"></div>
         {% if p.type == 'mobile' %}
-        <div class="mockup mockup-mobile">
+        <div class="mockup mockup-mobile{% if p.demo %} mockup-link{% endif %}"
+             {% if p.demo %}data-demo="{{ p.demo }}" data-name="{{ p.name }}" tabindex="0" role="link" aria-label="Ouvrir {{ p.name }}"{% endif %}>
           <div class="phone">
             <div class="phone-notch"></div>
             <div class="phone-screen">
@@ -83,9 +84,11 @@
               </div>
             </div>
           </div>
+          {% if p.demo %}<span class="mockup-hint" aria-hidden="true"><span class="mockup-hint-icon">↗</span>{{ p.cta_label or "Ouvrir l'app" }}</span>{% endif %}
         </div>
         {% else %}
-        <div class="mockup mockup-web">
+        <div class="mockup mockup-web{% if p.demo %} mockup-link{% endif %}"
+             {% if p.demo %}data-demo="{{ p.demo }}" data-name="{{ p.name }}" tabindex="0" role="link" aria-label="Ouvrir {{ p.name }}"{% endif %}>
           <div class="browser">
             <div class="browser-chrome">
               <span class="dot"></span><span class="dot"></span><span class="dot"></span>
@@ -113,6 +116,7 @@
               {% endif %}
             </div>
           </div>
+          {% if p.demo %}<span class="mockup-hint" aria-hidden="true"><span class="mockup-hint-icon">↗</span>{{ p.cta_label or "Ouvrir l'app" }}</span>{% endif %}
         </div>
         {% endif %}
       </div>
