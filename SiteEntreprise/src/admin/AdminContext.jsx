@@ -52,7 +52,7 @@ function setByPath(obj, path, value) {
 export function AdminProvider({ children }) {
   const [content, setContent] = useState(UP_DATA);
   const [loaded, setLoaded] = useState(false);
-  const [auth, setAuth] = useState({ authenticated: false, user: null });
+  const [auth, setAuth] = useState({ authenticated: false, user: null, source: null });
   const [editMode, setEditMode] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -82,7 +82,7 @@ export function AdminProvider({ children }) {
       } else {
         lastSavedRef.current = UP_DATA;
       }
-      setAuth(a || { authenticated: false });
+      setAuth(a || { authenticated: false, user: null, source: null });
       setLoaded(true);
     });
     return () => { cancelled = true; };
@@ -149,7 +149,7 @@ export function AdminProvider({ children }) {
       });
       const data = await r.json().catch(() => ({}));
       if (r.ok && data.ok) {
-        setAuth({ authenticated: true, user: data.user || username });
+        setAuth({ authenticated: true, user: data.user || username, source: data.source || 'site' });
         setShowLogin(false);
         setEditMode(true);
         return { ok: true };
@@ -164,9 +164,49 @@ export function AdminProvider({ children }) {
     try {
       await fetch(`${API}/auth/logout`, { method: 'POST', credentials: 'include' });
     } catch {}
-    setAuth({ authenticated: false, user: null });
+    // On re-fetch /api/auth/me : si la session Portfolio est encore là, on
+    // reste admin via "portfolio". Sinon, l'auth retombe à false.
+    try {
+      const r = await fetch(`${API}/auth/me`, { credentials: 'include' });
+      const me = await r.json().catch(() => ({ authenticated: false }));
+      setAuth(me);
+    } catch {
+      setAuth({ authenticated: false, user: null, source: null });
+    }
     setEditMode(false);
   }, []);
+
+  // ---- User management ----
+
+  const apiUsers = useCallback(async (path = '', init = {}) => {
+    const r = await fetch(`${API}/admin/users${path}`, {
+      credentials: 'include',
+      ...init,
+      headers: { 'Content-Type': 'application/json', ...(init.headers || {}) },
+    });
+    const data = await r.json().catch(() => ({}));
+    return { ok: r.ok && data.ok !== false, status: r.status, data };
+  }, []);
+
+  const fetchUsers = useCallback(async () => apiUsers(''), [apiUsers]);
+
+  const createUser = useCallback(async (username, password) =>
+    apiUsers('', { method: 'POST', body: JSON.stringify({ username, password }) }),
+  [apiUsers]);
+
+  const updateUser = useCallback(async (username, { password, newUsername } = {}) =>
+    apiUsers(`/${encodeURIComponent(username)}`, {
+      method: 'POST',
+      body: JSON.stringify({
+        ...(password ? { password } : {}),
+        ...(newUsername ? { new_username: newUsername } : {}),
+      }),
+    }),
+  [apiUsers]);
+
+  const deleteUser = useCallback(async (username) =>
+    apiUsers(`/${encodeURIComponent(username)}`, { method: 'DELETE' }),
+  [apiUsers]);
 
   const uploadImage = useCallback(async (file) => {
     if (!file) return { ok: false, error: 'Aucun fichier' };
@@ -186,6 +226,8 @@ export function AdminProvider({ children }) {
     }
   }, []);
 
+  const [showUsers, setShowUsers] = useState(false);
+
   const value = useMemo(() => ({
     content, loaded,
     auth, editMode, setEditMode,
@@ -193,9 +235,13 @@ export function AdminProvider({ children }) {
     setField, setFields, save, discard,
     login, logout, uploadImage,
     showLogin, setShowLogin,
+    showUsers, setShowUsers,
+    fetchUsers, createUser, updateUser, deleteUser,
     get: (path) => getByPath(content, path),
   }), [content, loaded, auth, editMode, dirty, saving, savedAt, error,
-       setField, setFields, save, discard, login, logout, uploadImage, showLogin]);
+       setField, setFields, save, discard, login, logout, uploadImage,
+       showLogin, showUsers,
+       fetchUsers, createUser, updateUser, deleteUser]);
 
   return (
     <AdminContext.Provider value={value}>

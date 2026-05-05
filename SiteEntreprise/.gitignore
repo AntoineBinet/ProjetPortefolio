@@ -1,2 +1,6 @@
 node_modules/
 uploads/
+site_users.db
+site_users.db-journal
+site_users.db-wal
+site_users.db-shm
