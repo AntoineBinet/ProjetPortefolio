@@ -92,11 +92,25 @@
               <span class="browser-url">{{ p.name|lower }}.app</span>
             </div>
             <div class="browser-body">
+              {% if p.demo %}
+              <div class="browser-preview">
+                <iframe
+                  class="browser-frame"
+                  src="{{ p.demo }}"
+                  title="Aperçu — {{ p.name }}"
+                  loading="lazy"
+                  tabindex="-1"
+                  aria-hidden="true"
+                  scrolling="no"
+                  referrerpolicy="no-referrer"></iframe>
+              </div>
+              {% else %}
               <div class="mockup-stripes" style="--accent: {{ p.accent }};"></div>
               <div class="mockup-label">
                 <div>[ {{ p.name|lower }} ]</div>
                 <div class="mockup-sub">web mockup placeholder</div>
               </div>
+              {% endif %}
             </div>
           </div>
         </div>
