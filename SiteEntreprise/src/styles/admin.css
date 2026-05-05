@@ -321,6 +321,143 @@
   background: #EF8827;
   box-shadow: 0 0 0 2px rgba(255,255,255,.85);
 }
+.nav-icon-btn.is-admin-loading {
+  cursor: progress;
+  opacity: 0.55;
+}
+
+/* === Toolbar : badge user + source === */
+.admin-toolbar-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.78);
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+}
+.admin-toolbar-source {
+  background: rgba(239,136,39,0.18);
+  color: #fbbf77;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* === Users modal === */
+.admin-modal-wide {
+  max-width: 540px;
+  padding-bottom: 12px;
+}
+.admin-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.admin-users-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 4px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.admin-users-empty {
+  color: #777;
+  font-style: italic;
+  padding: 14px;
+  text-align: center;
+}
+.admin-users-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(17,32,42,0.10);
+  border-radius: 8px;
+  background: #fafafa;
+  transition: border-color .12s, background .12s;
+}
+.admin-users-row.is-editing {
+  grid-template-columns: 1fr;
+  background: #fff;
+  border-color: rgba(239, 136, 39, 0.45);
+  box-shadow: 0 1px 6px rgba(0,0,0,.04);
+}
+.admin-users-name {
+  font-weight: 600;
+  color: #11202A;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.admin-users-badge {
+  background: rgba(239,136,39,0.16);
+  color: #b35a08;
+  font-size: 0.66rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.admin-users-meta {
+  color: #777;
+  font-size: 0.78rem;
+}
+.admin-users-actions {
+  display: flex;
+  gap: 6px;
+}
+.admin-users-actions .admin-btn {
+  color: #11202A;
+  border-color: rgba(17,32,42,0.18);
+  padding: 5px 10px;
+  font-size: 0.78rem;
+}
+.admin-users-actions .admin-btn:hover:not(:disabled) {
+  background: rgba(17,32,42,0.06);
+}
+
+.admin-btn-danger {
+  color: #b91c1c;
+  border-color: rgba(220, 38, 38, 0.32);
+}
+.admin-btn-danger:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.08);
+  border-color: rgba(220, 38, 38, 0.55);
+  color: #991b1b;
+}
+
+.admin-users-edit .admin-field {
+  margin-bottom: 8px;
+}
+
+.admin-users-create {
+  margin-top: 14px;
+  border-top: 1px solid rgba(17, 32, 42, 0.08);
+  padding-top: 12px;
+}
+.admin-users-create > summary {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 600;
+  color: #11202A;
+  padding: 6px 0;
+  user-select: none;
+}
+.admin-users-create > summary::-webkit-details-marker { display: none; }
+.admin-users-create[open] > summary { color: #EF8827; }
+.admin-users-create form {
+  margin-top: 8px;
+}
 
 /* Évite que la toolbar masque le footer */
 body:has(.admin-toolbar) {

@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react';
 import { useAdmin } from './AdminContext';
 
 export function AdminToolbar() {
-  const { auth, editMode, setEditMode, dirty, saving, savedAt, save, discard, logout, error } = useAdmin();
+  const {
+    auth, editMode, setEditMode,
+    dirty, saving, savedAt, save, discard, logout, error,
+    setShowUsers,
+  } = useAdmin();
   const [justSaved, setJustSaved] = useState(false);
 
   useEffect(() => {
@@ -32,6 +36,18 @@ export function AdminToolbar() {
            dirty ? 'Modifications non sauvegardées' :
            justSaved ? 'Sauvegardé ✓' : 'Mode édition'}
         </span>
+        {auth.user && (
+          <span className="admin-toolbar-user" title={
+            auth.source === 'portfolio'
+              ? 'Connecté via la session du portefolio'
+              : 'Connecté avec un compte du site démo'
+          }>
+            {auth.user}
+            <span className="admin-toolbar-source">
+              {auth.source === 'portfolio' ? 'portefolio' : 'site démo'}
+            </span>
+          </span>
+        )}
         {error && <span className="admin-toolbar-error">⚠ {error}</span>}
       </div>
       <div className="admin-toolbar-right">
@@ -51,6 +67,12 @@ export function AdminToolbar() {
         <button
           type="button"
           className="admin-btn admin-btn-ghost"
+          onClick={() => setShowUsers(true)}
+          title="Gérer les comptes admin du site démo"
+        >Utilisateurs</button>
+        <button
+          type="button"
+          className="admin-btn admin-btn-ghost"
           onClick={() => setEditMode(false)}
           title="Quitter le mode édition"
         >Aperçu</button>
@@ -58,7 +80,7 @@ export function AdminToolbar() {
           type="button"
           className="admin-btn admin-btn-ghost"
           onClick={logout}
-          title="Se déconnecter"
+          title="Se déconnecter du compte site démo"
         >Déconnexion</button>
       </div>
     </div>
@@ -99,7 +121,7 @@ export function AdminLoginModal() {
         onSubmit={onSubmit}
       >
         <header className="admin-modal-head">
-          <strong>Espace administrateur</strong>
+          <strong>Connexion — site démo Up Technologies</strong>
           <button
             type="button"
             className="admin-modal-close"
@@ -108,7 +130,8 @@ export function AdminLoginModal() {
           >×</button>
         </header>
         <p className="admin-modal-intro">
-          Connectez-vous pour modifier le contenu du site.
+          Compte admin propre au site démo (différent du portefolio).
+          Par défaut : <code>admin / admin</code>.
         </p>
         <label className="admin-field">
           <span>Identifiant</span>

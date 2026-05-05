@@ -4,19 +4,26 @@
 - `index.html` : SPA (no-cache, géré par _no_cache_html dans app.py)
 - `content.json` : tout le contenu éditable (texts, listes, contacts, articles…)
 - `uploads/` : images uploadées par l'admin via /api/upload
+- `site_users.db` : SQLite, comptes admin spécifiques au site démo
 
-API :
-- GET  /site-entreprise/api/content        public, renvoie le JSON éditable
-- POST /site-entreprise/api/content        admin, écrase le contenu
-- GET  /site-entreprise/api/auth/me        renvoie {authenticated, user}
-- POST /site-entreprise/api/auth/login     username/password → set Flask session
-- POST /site-entreprise/api/auth/logout    clear session
-- POST /site-entreprise/api/upload         admin, multipart fichier → URL
-- GET  /site-entreprise/uploads/<file>     sert les uploads (cache 1 an)
+API publiques :
+- GET  /site-entreprise/api/content        renvoie le JSON éditable
+- GET  /site-entreprise/api/auth/me        {authenticated, user, source}
+- POST /site-entreprise/api/auth/login     username/password (creds Up Tech)
+- POST /site-entreprise/api/auth/logout    clear site_user (pas la session Portfolio)
 
-Auth admin = même session Flask que /admin/parametres (cookie partagé sur le
-domaine marienour.work). Donc se connecter au portefolio donne accès admin sur
-le site démo automatiquement, et inversement.
+API admin (auth requise) :
+- POST /site-entreprise/api/content        sauve content.json
+- POST /site-entreprise/api/upload         upload image
+- GET  /site-entreprise/api/admin/users          liste les users
+- POST /site-entreprise/api/admin/users          crée un user
+- POST /site-entreprise/api/admin/users/<u>      change pass / rename
+- POST /site-entreprise/api/admin/users/<u>/me   change son propre pass (avec ancien)
+- DELETE /site-entreprise/api/admin/users/<u>    supprime un user
+
+Auth admin = un de :
+- session["site_user"]  (login direct sur Up Tech)
+- session["user"]       (admin Portfolio → auto-grant, "viens du portefolio")
 """
 from __future__ import annotations
 
@@ -35,6 +42,8 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
+from . import site_db
+
 site_entreprise_bp = Blueprint(
     "site_entreprise",
     __name__,
@@ -44,33 +53,40 @@ site_entreprise_bp = Blueprint(
 _HERE = Path(__file__).resolve().parent
 _DIST = _HERE / "dist"
 _CONTENT_FILE = _HERE / "content.json"
-_DEFAULT_CONTENT_FILE = _HERE / "content.json"  # même fichier, sert de fallback
 _UPLOADS_DIR = _HERE / "uploads"
 
 _ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"}
 _MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # 8 MB
 
+# Init DB au chargement du module (idempotent).
+site_db.init_db()
+
+
+# ---------------- Helpers auth ----------------
+
+def _portfolio_user() -> str | None:
+    """Renvoie le user Portfolio loggé (s'il y en a un)."""
+    return session.get("user")
+
+
+def _site_user() -> str | None:
+    """Renvoie le user Up Tech loggé (s'il y en a un)."""
+    return session.get("site_user")
+
 
 def _is_admin() -> bool:
-    return bool(session.get("user"))
+    return bool(_portfolio_user() or _site_user())
 
 
-def _portfolio_credentials() -> tuple[str, str]:
-    """Lit les credentials admin depuis l'env + .portfolio_config.json."""
-    user = os.environ.get("PORTFOLIO_USER", "admin")
-    pwd = os.environ.get("PORTFOLIO_PASS", "admin")
-    cfg = _HERE.parent / ".portfolio_config.json"
-    if cfg.exists():
-        try:
-            data = json.loads(cfg.read_text(encoding="utf-8"))
-            if data.get("admin_user"):
-                user = data["admin_user"]
-            if data.get("admin_pass"):
-                pwd = data["admin_pass"]
-        except Exception:
-            pass
-    return user, pwd
+def _current_admin_info() -> dict:
+    if u := _site_user():
+        return {"authenticated": True, "user": u, "source": "site"}
+    if u := _portfolio_user():
+        return {"authenticated": True, "user": u, "source": "portfolio"}
+    return {"authenticated": False, "user": None, "source": None}
 
+
+# ---------------- Content store ----------------
 
 def _load_content() -> dict:
     try:
@@ -88,7 +104,7 @@ def _save_content(data: dict) -> None:
     )
 
 
-# ---------------- API ----------------
+# ---------------- API : content ----------------
 
 @site_entreprise_bp.get("/api/content")
 def api_get_content():
@@ -106,29 +122,103 @@ def api_save_content_route():
     return jsonify(ok=True)
 
 
+# ---------------- API : auth ----------------
+
 @site_entreprise_bp.get("/api/auth/me")
 def api_auth_me():
-    return jsonify(authenticated=_is_admin(), user=session.get("user"))
+    return jsonify(_current_admin_info())
 
 
 @site_entreprise_bp.post("/api/auth/login")
 def api_auth_login():
     body = request.get_json(silent=True) or {}
     u = (body.get("username") or "").strip()
-    p = (body.get("password") or "").strip()
-    admin_user, admin_pass = _portfolio_credentials()
-    if u == admin_user and p == admin_pass:
-        session["user"] = u
-        session.permanent = True
-        return jsonify(ok=True, user=u)
-    return jsonify(ok=False, error="Identifiants invalides"), 401
+    p = body.get("password") or ""
+    user = site_db.verify_credentials(u, p)
+    if not user:
+        return jsonify(ok=False, error="Identifiants invalides"), 401
+    session["site_user"] = user["username"]
+    session.permanent = True
+    return jsonify(ok=True, user=user["username"], source="site")
 
 
 @site_entreprise_bp.post("/api/auth/logout")
 def api_auth_logout():
-    session.pop("user", None)
+    # On retire seulement la session Up Tech, pas celle du Portfolio.
+    session.pop("site_user", None)
     return jsonify(ok=True)
 
+
+# ---------------- API : user management (admin only) ----------------
+
+def _admin_only():
+    if not _is_admin():
+        return jsonify(ok=False, error="Non autorisé"), 401
+    return None
+
+
+@site_entreprise_bp.get("/api/admin/users")
+def api_admin_list_users():
+    if (err := _admin_only()):
+        return err
+    info = _current_admin_info()
+    return jsonify(
+        ok=True,
+        users=site_db.list_users(),
+        current_user=info["user"],
+        current_source=info["source"],
+    )
+
+
+@site_entreprise_bp.post("/api/admin/users")
+def api_admin_create_user():
+    if (err := _admin_only()):
+        return err
+    body = request.get_json(silent=True) or {}
+    username = body.get("username") or ""
+    password = body.get("password") or ""
+    try:
+        user = site_db.create_user(username, password)
+    except ValueError as e:
+        return jsonify(ok=False, error=str(e)), 400
+    return jsonify(ok=True, user=user)
+
+
+@site_entreprise_bp.post("/api/admin/users/<username>")
+def api_admin_update_user(username):
+    if (err := _admin_only()):
+        return err
+    body = request.get_json(silent=True) or {}
+    new_password = body.get("password")
+    new_username = body.get("new_username")
+    try:
+        if new_password:
+            site_db.set_password(username, new_password)
+        if new_username and new_username != username:
+            site_db.rename_user(username, new_username)
+            # Si l'utilisateur connecté s'est renommé lui-même, mettre à jour la session.
+            if session.get("site_user") == username:
+                session["site_user"] = new_username
+    except ValueError as e:
+        return jsonify(ok=False, error=str(e)), 400
+    return jsonify(ok=True, user=site_db.get_user(new_username or username))
+
+
+@site_entreprise_bp.delete("/api/admin/users/<username>")
+def api_admin_delete_user(username):
+    if (err := _admin_only()):
+        return err
+    try:
+        site_db.delete_user(username)
+    except ValueError as e:
+        return jsonify(ok=False, error=str(e)), 400
+    # Si l'utilisateur s'est supprimé lui-même, virer aussi sa session.
+    if session.get("site_user") == username:
+        session.pop("site_user", None)
+    return jsonify(ok=True)
+
+
+# ---------------- API : upload ----------------
 
 @site_entreprise_bp.post("/api/upload")
 def api_upload():
@@ -170,14 +260,11 @@ def serve_asset(filename):
 @site_entreprise_bp.route("/", defaults={"path": ""})
 @site_entreprise_bp.route("/<path:path>")
 def index(path):
-    # /api/* et /uploads/* sont déjà capturés par les routes ci-dessus grâce
-    # au matching plus spécifique de Flask, mais on garde un garde-fou explicite.
     if path.startswith("api/") or path.startswith("uploads/"):
         abort(404)
     if not _DIST.exists():
         abort(503)
     # Sert les fichiers statiques de dist/ (ex. up-favicon.svg) tels quels.
-    # Si le chemin ne correspond à rien, fallback sur index.html (SPA routing).
     if path:
         candidate = _DIST / path
         try:

@@ -10,6 +10,7 @@ import Agences from './pages/Agences';
 import Actualites from './pages/Actualites';
 import { AdminProvider } from './admin/AdminContext';
 import { AdminToolbar, AdminLoginModal } from './admin/AdminToolbar';
+import { UsersModal } from './admin/UsersModal';
 import './styles/base.css';
 import './styles/sections.css';
 import './styles/admin.css';
@@ -44,6 +45,7 @@ function Site() {
       <Footer />
       <AdminToolbar />
       <AdminLoginModal />
+      <UsersModal />
     </div>
   );
 }

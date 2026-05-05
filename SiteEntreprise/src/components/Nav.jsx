@@ -4,7 +4,7 @@ import { useAdmin, useContent } from '../admin/AdminContext';
 
 export default function Nav({ active, onNav, dark }) {
   const data = useContent();
-  const { auth, editMode, setEditMode, setShowLogin } = useAdmin();
+  const { auth, editMode, setEditMode, setShowLogin, loaded } = useAdmin();
 
   const links = data.navLinks || [
     { id: 'home',       label: "What's Up ?" },
@@ -14,14 +14,19 @@ export default function Nav({ active, onNav, dark }) {
     { id: 'actualites', label: 'Actualités' },
   ];
 
-  const lockTitle = !auth.authenticated
-    ? 'Espace administrateur — connexion'
-    : editMode
-      ? 'Quitter le mode édition'
-      : 'Activer le mode édition';
+  const lockTitle = !loaded
+    ? 'Vérification de la session…'
+    : !auth.authenticated
+      ? 'Espace administrateur — connexion'
+      : editMode
+        ? 'Quitter le mode édition'
+        : auth.source === 'portfolio'
+          ? 'Activer le mode édition (session portefolio)'
+          : 'Activer le mode édition';
 
   const onLockClick = (e) => {
     e.preventDefault();
+    if (!loaded) return;  // évite la race condition (clic avant que /auth/me réponde)
     if (auth.authenticated) {
       setEditMode(!editMode);
     } else {
@@ -31,6 +36,7 @@ export default function Nav({ active, onNav, dark }) {
 
   const lockClass = [
     'nav-icon-btn',
+    !loaded ? 'is-admin-loading' : '',
     auth.authenticated ? 'is-admin-loggedin' : '',
     editMode ? 'is-admin-on' : '',
   ].filter(Boolean).join(' ');
