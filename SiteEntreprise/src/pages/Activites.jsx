@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Icon from '../components/Icon';
+import IconPicker from '../components/IconPicker';
 import { useContent, useAdmin } from '../admin/AdminContext';
 import { Editable, EditableImage } from '../admin/Editable';
 import { ListControls } from '../admin/AdminToolbar';
@@ -49,7 +50,7 @@ export default function Activites() {
       <div className="container a-intervention">
         {intervention.map((it, i) => (
           <article className="a-int-card" key={i} style={{ '--i': i }}>
-            <div className="a-int-icon"><Icon name={it.icon} size={28} stroke="#EF8827"/></div>
+            <div className="a-int-icon"><IconPicker path={`intervention.${i}.icon`} size={28} stroke="#EF8827"/></div>
             <div className="a-int-num">{String(i + 1).padStart(2, '0')} / 0{intervention.length}</div>
             <Editable as="h3" path={`intervention.${i}.title`} />
             <Editable as="p" path={`intervention.${i}.text`} multiline />
@@ -126,7 +127,7 @@ export default function Activites() {
           {metiers.map((m, i) => (
             <details key={`${m.name}-${i}`} className="a-metier-card" style={{ '--d': `${i * 0.05}s` }}>
               <summary>
-                <span className="a-metier-card-icon"><Icon name={m.icon} size={18} stroke="#EF8827"/></span>
+                <span className="a-metier-card-icon"><IconPicker path={`metiers.${i}.icon`} size={18} stroke="#EF8827"/></span>
                 <span className="a-metier-card-num">{String(i + 1).padStart(2, '0')}</span>
                 <Editable as="span" className="a-metier-card-name" path={`metiers.${i}.name`} />
                 <span className="a-metier-card-chev" aria-hidden="true">+</span>

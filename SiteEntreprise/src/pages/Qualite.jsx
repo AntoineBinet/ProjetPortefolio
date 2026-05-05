@@ -10,15 +10,22 @@ export default function Qualite() {
   const c = useContent();
   const docs = c.documents || [];
   const certs = c.certifications || [];
+  const tickerText = c.qualiteIntro?.tickerText
+    || 'EcoVadis Silver · ISO 9001 · ISO 14001 · ISO 27001 · Agrément CIR · Time for the Planet';
 
   return (
     <section className="q-section" id="qualite">
       <div className="q-ticker" aria-hidden="true">
         <div className="q-ticker-track">
           {Array.from({ length: 3 }).map((_, i) => (
-            <span key={i}>EcoVadis Silver · ISO 9001 · ISO 14001 · ISO 27001 · Agrément CIR · Time for the Planet · EcoVadis Silver · ISO 9001 · ISO 14001 · ISO 27001 · Agrément CIR · Time for the Planet · </span>
+            <span key={i}>{tickerText} · {tickerText} · </span>
           ))}
         </div>
+      </div>
+      {/* Champ admin : éditer le texte du ticker ci-dessus */}
+      <div className="q-ticker-edit container" aria-hidden="true">
+        <span className="q-ticker-edit-label">Ticker :</span>
+        <Editable as="span" className="q-ticker-edit-input" path="qualiteIntro.tickerText" />
       </div>
       <div className="container q-grid">
         <div>
