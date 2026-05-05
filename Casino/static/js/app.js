@@ -101,9 +101,15 @@ function saveSettings() {
 /* ── Bootstrap ───────────────────────────────────────────── */
 
 async function bootstrap() {
-  state.user = await api.fetchMe();
+  const me = await api.fetchMe();
+  state.user = me.user;
+  state.mustChangePassword = me.mustChangePassword;
   applyVisualSettings();
   route();
+  // Si admin pas encore "passé par la case mot de passe" → modal bloquante
+  if (state.user?.is_admin && state.mustChangePassword) {
+    openForcedPasswordChange();
+  }
 }
 
 function applyVisualSettings() {
@@ -138,6 +144,15 @@ function route() {
                     || hash === "#/settings"
                     || hash.startsWith("#/invite/");
   document.body.classList.toggle("theme-light", isLightShell);
+
+  // Login obligatoire pour entrer dans le Casino. Seules les routes
+  // login + invitation (consommation d'un lien d'invitation) sont accessibles
+  // sans session.
+  const isPublicRoute = hash === "#/login" || hash.startsWith("#/invite/");
+  if (!state.user && !isPublicRoute) {
+    location.hash = "#/login";
+    return;
+  }
 
   if (hash === "#/" || hash === "")           return renderHome(root);
   if (hash === "#/holdem")                    return startSolo(root);
@@ -181,6 +196,7 @@ function renderHome(root) {
       if (alt === "login") return (location.hash = "#/login");
       await api.logout();
       state.user = null;
+      location.hash = "#/login";
       route();
     },
   });
@@ -198,11 +214,16 @@ function openInviteCreator() {
 function renderAdminLogin(root) {
   root.innerHTML = `
     <section class="lite-page">
-      <button class="lite-back" data-act="back">← Retour</button>
+      <a class="lite-back" href="/" data-act="portfolio">← Retour au portfolio</a>
       <div class="lite-card">
-        <div class="lite-eyebrow">Connexion · Admin</div>
-        <h1 class="lite-title">Mot de passe.</h1>
-        <p class="lite-sub">Réservé à l'administrateur du casino. Le mot de passe est celui du portfolio.</p>
+        <div class="lite-eyebrow">Casino · Connexion</div>
+        <h1 class="lite-title">Connexion requise.</h1>
+        <p class="lite-sub">Le casino a son propre compte administrateur (séparé du portfolio).
+          Par défaut <code>admin / admin</code> — le changer immédiatement après la première connexion.</p>
+        <div class="lite-field">
+          <label>Identifiant</label>
+          <input class="lite-input" type="text" id="adminUser" autocomplete="username" value="admin">
+        </div>
         <div class="lite-field">
           <label>Mot de passe</label>
           <input class="lite-input" type="password" id="adminPwd" autocomplete="current-password">
@@ -210,22 +231,67 @@ function renderAdminLogin(root) {
         <div class="lite-btnrow">
           <button class="lite-btn" id="adminLogin">Se connecter</button>
         </div>
+        <p class="lite-foot-mute" style="margin-top:18px;font-size:12px;color:#888">
+          Tu as un lien d'invitation ? Ouvre-le directement, le formulaire de connexion ne te concerne pas.
+        </p>
       </div>
     </section>
   `;
-  root.querySelector('[data-act="back"]').addEventListener("click", () => location.hash = "#/");
   const inp = root.querySelector("#adminPwd");
-  inp.focus();
+  const userInp = root.querySelector("#adminUser");
+  userInp.addEventListener("keydown", e => { if (e.key === "Enter") inp.focus(); });
   inp.addEventListener("keydown", e => { if (e.key === "Enter") doAdminLogin(); });
   root.querySelector("#adminLogin").addEventListener("click", doAdminLogin);
+  setTimeout(() => inp.focus(), 50);
 }
 async function doAdminLogin() {
+  const username = document.getElementById("adminUser").value.trim();
   const pwd = document.getElementById("adminPwd").value;
-  const r = await api.adminLogin(pwd);
-  if (!r.ok) return toast(r.error || "Mot de passe incorrect", "err");
+  const r = await api.adminLogin(username, pwd);
+  if (!r.ok) return toast(r.error || "Identifiants invalides", "err");
   state.user = r.user;
+  state.mustChangePassword = !!r.must_change_password;
   toast(`Bienvenue ${r.user.name}`, "ok");
   location.hash = "#/";
+  if (state.mustChangePassword) {
+    setTimeout(openForcedPasswordChange, 200);
+  }
+}
+
+/* ── Force changement mot de passe à la première connexion ─ */
+
+function openForcedPasswordChange() {
+  if (!state.user?.is_admin) return;
+  openModal(`
+    <h2>Sécuriser le compte admin</h2>
+    <p>Tu utilises encore le mot de passe par défaut <code>admin</code>.
+       Choisis-en un nouveau (et un identifiant si tu veux) avant de continuer.</p>
+    <div class="field"><label>Nouvel identifiant</label>
+      <input class="input" id="fpcUser" maxlength="32" value="admin"></div>
+    <div class="field" style="margin-top:10px"><label>Nouveau mot de passe (min 6)</label>
+      <input class="input" type="password" id="fpcPwd" autocomplete="new-password"></div>
+    <div class="field" style="margin-top:10px"><label>Confirmer</label>
+      <input class="input" type="password" id="fpcPwd2" autocomplete="new-password"></div>
+    <div class="modal-row" style="margin-top:14px">
+      <button class="btn btn--primary btn--full" id="fpcSave">Enregistrer</button>
+    </div>
+  `, { dismissible: false });
+  document.getElementById("fpcSave").addEventListener("click", async () => {
+    const newU = document.getElementById("fpcUser").value.trim();
+    const n1 = document.getElementById("fpcPwd").value;
+    const n2 = document.getElementById("fpcPwd2").value;
+    if (n1.length < 6) return toast("Min 6 caractères", "err");
+    if (n1 !== n2)     return toast("Les mots de passe ne correspondent pas", "err");
+    const r = await api.changeAdminPassword({
+      old_password: "admin",
+      new_password: n1,
+      new_username: newU || undefined,
+    });
+    if (!r.ok) return toast(r.error || "Erreur", "err");
+    state.mustChangePassword = false;
+    document.getElementById("modal-root").innerHTML = "";
+    toast("Compte admin sécurisé", "ok");
+  });
 }
 
 /* ── Invite redemption ───────────────────────────────────── */

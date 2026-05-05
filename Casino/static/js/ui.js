@@ -365,13 +365,17 @@ export function toast(msg, kind = "default", ms = 2400) {
 
 export function openModal(html, opts = {}) {
   const root = document.getElementById("modal-root");
-  root.innerHTML = `<div class="modal-backdrop" id="mb"><div class="modal glass glass--deep">${html}<button class="modal-close" data-close>×</button></div></div>`;
+  const dismissible = opts.dismissible !== false;
+  const closeBtn = dismissible ? `<button class="modal-close" data-close>×</button>` : "";
+  root.innerHTML = `<div class="modal-backdrop" id="mb"><div class="modal glass glass--deep">${html}${closeBtn}</div></div>`;
   const close = () => { root.innerHTML = ""; opts.onClose?.(); };
-  root.querySelector("[data-close]").addEventListener("click", close);
-  if (opts.closeOnBackdrop !== false) {
-    root.querySelector("#mb").addEventListener("click", e => {
-      if (e.target.id === "mb") close();
-    });
+  if (dismissible) {
+    root.querySelectorAll("[data-close]").forEach(b => b.addEventListener("click", close));
+    if (opts.closeOnBackdrop !== false) {
+      root.querySelector("#mb").addEventListener("click", e => {
+        if (e.target.id === "mb") close();
+      });
+    }
   }
   return { root, close };
 }

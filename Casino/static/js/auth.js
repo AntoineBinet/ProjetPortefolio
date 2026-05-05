@@ -7,15 +7,28 @@ const API = "/casino/api";
 export async function fetchMe() {
   const r = await fetch(`${API}/me`, { credentials: "same-origin" });
   const d = await r.json();
-  return d.user || null;
+  return {
+    user: d.user || null,
+    mustChangePassword: !!d.must_change_password,
+  };
 }
 
-export async function adminLogin(password) {
+export async function adminLogin(username, password) {
   const r = await fetch(`${API}/auth/admin-login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "same-origin",
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({ username, password }),
+  });
+  return r.json();
+}
+
+export async function changeAdminPassword({ old_password, new_password, new_username }) {
+  const r = await fetch(`${API}/auth/admin-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ old_password, new_password, new_username }),
   });
   return r.json();
 }

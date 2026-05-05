@@ -1,5 +1,6 @@
 node_modules/
 uploads/
+admin_pass.json
 site_users.db
 site_users.db-journal
 site_users.db-wal

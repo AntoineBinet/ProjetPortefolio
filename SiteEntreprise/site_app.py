@@ -4,26 +4,21 @@
 - `index.html` : SPA (no-cache, géré par _no_cache_html dans app.py)
 - `content.json` : tout le contenu éditable (texts, listes, contacts, articles…)
 - `uploads/` : images uploadées par l'admin via /api/upload
-- `site_users.db` : SQLite, comptes admin spécifiques au site démo
+- `admin_pass.json` : un seul mot de passe (pas de DB ni de comptes)
 
 API publiques :
 - GET  /site-entreprise/api/content        renvoie le JSON éditable
-- GET  /site-entreprise/api/auth/me        {authenticated, user, source}
-- POST /site-entreprise/api/auth/login     username/password (creds Up Tech)
-- POST /site-entreprise/api/auth/logout    clear site_user (pas la session Portfolio)
+- GET  /site-entreprise/api/auth/me        {authenticated, must_change_password}
+- POST /site-entreprise/api/auth/login     password seul (pas de username)
+- POST /site-entreprise/api/auth/logout    clear site_authed
+- POST /site-entreprise/api/auth/change-password  change le mot de passe (requiert auth + ancien)
 
 API admin (auth requise) :
 - POST /site-entreprise/api/content        sauve content.json
 - POST /site-entreprise/api/upload         upload image
-- GET  /site-entreprise/api/admin/users          liste les users
-- POST /site-entreprise/api/admin/users          crée un user
-- POST /site-entreprise/api/admin/users/<u>      change pass / rename
-- POST /site-entreprise/api/admin/users/<u>/me   change son propre pass (avec ancien)
-- DELETE /site-entreprise/api/admin/users/<u>    supprime un user
 
-Auth admin = un de :
-- session["site_user"]  (login direct sur Up Tech)
-- session["user"]       (admin Portfolio → auto-grant, "viens du portefolio")
+Auth admin = `session["site_authed"]` (vrai/faux). Le portfolio admin n'est
+plus auto-grant : Up Technologies a son propre cadenas / mot de passe.
 """
 from __future__ import annotations
 
@@ -58,32 +53,21 @@ _UPLOADS_DIR = _HERE / "uploads"
 _ALLOWED_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"}
 _MAX_UPLOAD_BYTES = 8 * 1024 * 1024  # 8 MB
 
-# Init DB au chargement du module (idempotent).
+# Init store password au chargement (idempotent).
 site_db.init_db()
 
 
 # ---------------- Helpers auth ----------------
 
-def _portfolio_user() -> str | None:
-    """Renvoie le user Portfolio loggé (s'il y en a un)."""
-    return session.get("user")
-
-
-def _site_user() -> str | None:
-    """Renvoie le user Up Tech loggé (s'il y en a un)."""
-    return session.get("site_user")
-
-
 def _is_admin() -> bool:
-    return bool(_portfolio_user() or _site_user())
+    return bool(session.get("site_authed"))
 
 
-def _current_admin_info() -> dict:
-    if u := _site_user():
-        return {"authenticated": True, "user": u, "source": "site"}
-    if u := _portfolio_user():
-        return {"authenticated": True, "user": u, "source": "portfolio"}
-    return {"authenticated": False, "user": None, "source": None}
+def _auth_status() -> dict:
+    return {
+        "authenticated": _is_admin(),
+        "must_change_password": site_db.must_change_password(),
+    }
 
 
 # ---------------- Content store ----------------
@@ -126,96 +110,40 @@ def api_save_content_route():
 
 @site_entreprise_bp.get("/api/auth/me")
 def api_auth_me():
-    return jsonify(_current_admin_info())
+    return jsonify(_auth_status())
 
 
 @site_entreprise_bp.post("/api/auth/login")
 def api_auth_login():
     body = request.get_json(silent=True) or {}
-    u = (body.get("username") or "").strip()
-    p = body.get("password") or ""
-    user = site_db.verify_credentials(u, p)
-    if not user:
-        return jsonify(ok=False, error="Identifiants invalides"), 401
-    session["site_user"] = user["username"]
+    pwd = body.get("password") or ""
+    if not site_db.verify_password(pwd):
+        return jsonify(ok=False, error="Mot de passe incorrect"), 401
+    session["site_authed"] = True
     session.permanent = True
-    return jsonify(ok=True, user=user["username"], source="site")
+    return jsonify(ok=True, **_auth_status())
 
 
 @site_entreprise_bp.post("/api/auth/logout")
 def api_auth_logout():
-    # On retire seulement la session Up Tech, pas celle du Portfolio.
-    session.pop("site_user", None)
+    session.pop("site_authed", None)
     return jsonify(ok=True)
 
 
-# ---------------- API : user management (admin only) ----------------
-
-def _admin_only():
+@site_entreprise_bp.post("/api/auth/change-password")
+def api_auth_change_password():
     if not _is_admin():
         return jsonify(ok=False, error="Non autorisé"), 401
-    return None
-
-
-@site_entreprise_bp.get("/api/admin/users")
-def api_admin_list_users():
-    if (err := _admin_only()):
-        return err
-    info = _current_admin_info()
-    return jsonify(
-        ok=True,
-        users=site_db.list_users(),
-        current_user=info["user"],
-        current_source=info["source"],
-    )
-
-
-@site_entreprise_bp.post("/api/admin/users")
-def api_admin_create_user():
-    if (err := _admin_only()):
-        return err
     body = request.get_json(silent=True) or {}
-    username = body.get("username") or ""
-    password = body.get("password") or ""
+    old = body.get("old_password") or ""
+    new = body.get("new_password") or ""
+    if not site_db.verify_password(old):
+        return jsonify(ok=False, error="Ancien mot de passe incorrect"), 401
     try:
-        user = site_db.create_user(username, password)
+        site_db.set_password(new)
     except ValueError as e:
         return jsonify(ok=False, error=str(e)), 400
-    return jsonify(ok=True, user=user)
-
-
-@site_entreprise_bp.post("/api/admin/users/<username>")
-def api_admin_update_user(username):
-    if (err := _admin_only()):
-        return err
-    body = request.get_json(silent=True) or {}
-    new_password = body.get("password")
-    new_username = body.get("new_username")
-    try:
-        if new_password:
-            site_db.set_password(username, new_password)
-        if new_username and new_username != username:
-            site_db.rename_user(username, new_username)
-            # Si l'utilisateur connecté s'est renommé lui-même, mettre à jour la session.
-            if session.get("site_user") == username:
-                session["site_user"] = new_username
-    except ValueError as e:
-        return jsonify(ok=False, error=str(e)), 400
-    return jsonify(ok=True, user=site_db.get_user(new_username or username))
-
-
-@site_entreprise_bp.delete("/api/admin/users/<username>")
-def api_admin_delete_user(username):
-    if (err := _admin_only()):
-        return err
-    try:
-        site_db.delete_user(username)
-    except ValueError as e:
-        return jsonify(ok=False, error=str(e)), 400
-    # Si l'utilisateur s'est supprimé lui-même, virer aussi sa session.
-    if session.get("site_user") == username:
-        session.pop("site_user", None)
-    return jsonify(ok=True)
+    return jsonify(ok=True, **_auth_status())
 
 
 # ---------------- API : upload ----------------

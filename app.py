@@ -87,27 +87,6 @@ app.secret_key = SECRET_KEY
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 
-@app.before_request
-def _isolate_portfolio_from_casino_users():
-    p = request.path
-    if (p.startswith("/casino")
-            or p.startswith("/api/deploy")
-            or p.startswith("/static")
-            or p in ("/favicon.ico", "/robots.txt")):
-        return None
-    if session.get("user"):
-        return None
-    cookie = request.cookies.get("casino_session")
-    if cookie:
-        try:
-            from Casino import casino_db
-            if casino_db.get_session(cookie):
-                return redirect("/casino", code=302)
-        except Exception:
-            pass
-    return None
-
-
 @app.after_request
 def _no_cache_html(resp):
     ct = (resp.headers.get("Content-Type") or "").lower()
