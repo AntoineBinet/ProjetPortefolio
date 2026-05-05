@@ -97,11 +97,16 @@
             <div class="browser-body">
               {% if p.demo %}
               <div class="browser-preview">
+                <div class="browser-skeleton" aria-hidden="true">
+                  <div class="browser-skeleton-bar" style="width: 32%"></div>
+                  <div class="browser-skeleton-bar" style="width: 64%"></div>
+                  <div class="browser-skeleton-bar" style="width: 48%"></div>
+                  <div class="browser-skeleton-block"></div>
+                </div>
                 <iframe
                   class="browser-frame"
-                  src="{{ p.demo }}"
+                  data-src="{{ p.demo }}"
                   title="Aperçu — {{ p.name }}"
-                  loading="lazy"
                   tabindex="-1"
                   aria-hidden="true"
                   scrolling="no"

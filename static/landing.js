@@ -64,6 +64,32 @@
       });
     }, { root: snap, threshold: [0.55] });
     sections.forEach((s) => io.observe(s));
+
+    // Lazy-load les iframes quand leur section entre dans le snap viewport.
+    // (loading="lazy" ne fonctionne pas de manière fiable dans un conteneur
+    // scroll-snap, donc on gère manuellement avec l'IntersectionObserver.)
+    const frameIO = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const frames = entry.target.querySelectorAll('iframe.browser-frame[data-src]');
+        frames.forEach((f) => {
+          const src = f.dataset.src;
+          if (!src) return;
+          const preview = f.closest('.browser-preview');
+          f.removeAttribute('data-src');
+          const reveal = () => preview && preview.classList.add('is-loaded');
+          f.addEventListener('load', reveal, { once: true });
+          // Fallback : si l'iframe ne déclenche pas load (ex. SPA lente),
+          // on force l'affichage après 4 s pour ne pas rester sur le skeleton.
+          setTimeout(reveal, 4000);
+          f.src = src;
+        });
+        frameIO.unobserve(entry.target);
+      });
+    }, { root: snap, rootMargin: '200% 0px', threshold: 0 });
+    sections.forEach((s) => {
+      if (s.querySelector('iframe.browser-frame[data-src]')) frameIO.observe(s);
+    });
   }
 
   // ── Nav arrows ─────────────────────────────────────────────────
