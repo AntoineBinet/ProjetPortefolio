@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}500 — {{ studio_name }}{% endblock %}
+{% block body_class %}page-500{% endblock %}
+
+{% block body %}
+<main class="error-card">
+  <div class="hero-eyebrow">Erreur · 500</div>
+  <h1 class="error-title">Le serveur a rencontré un souci.</h1>
+  <p class="muted">
+    Une exception inattendue s'est produite. Tu peux recharger la page,
+    revenir à l'accueil, ou relancer le serveur si tu es admin.
+  </p>
+
+  {% if error_id %}
+  <p class="muted small">
+    Référence : <code>{{ error_id }}</code>
+  </p>
+  {% endif %}
+
+  <div class="error-actions">
+    <a href="{{ url_for('index') }}" class="btn-primary">Retour à l'accueil</a>
+    <button id="btnReload" class="btn-secondary" type="button">Recharger</button>
+    <button id="btnRepair" class="btn-ghost" type="button">Réparer &amp; redémarrer</button>
+  </div>
+
+  <p class="muted small" id="repairStatus" aria-live="polite"></p>
+</main>
+
+<script>
+  document.getElementById('btnReload').addEventListener('click', () => location.reload());
+
+  document.getElementById('btnRepair').addEventListener('click', async () => {
+    if (!confirm("Pull origin/main + redémarrage du serveur ?")) return;
+    const status = document.getElementById('repairStatus');
+    status.textContent = "Mise à jour en cours…";
+    try {
+      const r = await fetch("/api/deploy/pull-from-404", { method: "POST" });
+      const d = await r.json();
+      status.textContent = d.ok ? d.message : ("Erreur : " + d.error);
+      if (d.ok) setTimeout(() => location.href = "/", 8000);
+    } catch (e) {
+      status.textContent = "Erreur réseau : " + e.message;
+    }
+  });
+</script>
+{% endblock %}
