@@ -34,7 +34,7 @@ from flask import (
 )
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.1.0"
 APP_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORTFOLIO_PORT", "8001"))
 ADMIN_USER = os.environ.get("PORTFOLIO_USER", "admin")
@@ -212,6 +212,7 @@ PROJECTS = [
     {"id": 2, "slug": "site-entreprise", "name": "Site d'entreprise", "tagline": "Site vitrine professionnel — identité, services et contact.", "tags": ["web", "vitrine", "branding"], "year": 2026, "accent": "oklch(0.62 0.18 210)", "type": "web", "demo": "/site-entreprise", "cta_label": "Voir le site"},
     {"id": 3, "slug": "nimbus", "name": "Nimbus", "tagline": "Vitrine produit tech — casque audio premium, animations CSS et configurateur de couleurs.", "tags": ["web", "vitrine", "produit"], "year": 2026, "accent": "oklch(0.6 0.2 285)", "type": "web", "demo": "/nimbus", "cta_label": "Voir le site"},
     {"id": 4, "slug": "tandem", "name": "Tandem", "tagline": "Plateforme collaborative — channels de discussion, partage de fichiers et invitations.", "tags": ["web", "saas", "collab"], "year": 2026, "accent": "oklch(0.7 0.12 215)", "type": "web", "demo": "/tandem", "cta_label": "Ouvrir l'app"},
+    {"id": 5, "slug": "tyla-maison", "name": "TYLA Maison", "tagline": "Domotique de la maison — pilotez ampoules TUYA, prises, aspirateur, projecteur et barre de son depuis une carte interactive.", "tags": ["web", "domotique", "iot"], "year": 2026, "accent": "oklch(0.84 0.16 80)", "type": "web", "demo": "/tyla", "cta_label": "Ouvrir l'app"},
 ]
 
 app = Flask(__name__)
@@ -901,11 +902,13 @@ from Casino import casino_bp  # noqa: E402
 from SiteEntreprise import site_entreprise_bp  # noqa: E402
 from Nimbus import nimbus_bp  # noqa: E402
 from Tandem import tandem_bp  # noqa: E402
+from TylaMaison import tyla_bp  # noqa: E402
 
 app.register_blueprint(casino_bp)
 app.register_blueprint(site_entreprise_bp)
 app.register_blueprint(nimbus_bp)
 app.register_blueprint(tandem_bp)
+app.register_blueprint(tyla_bp)
 
 
 @app.errorhandler(404)
