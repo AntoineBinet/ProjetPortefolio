@@ -32,7 +32,7 @@ from flask import (
 )
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-APP_VERSION = "0.4.5"
+APP_VERSION = "0.4.6"
 APP_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORTFOLIO_PORT", "8001"))
 ADMIN_USER = os.environ.get("PORTFOLIO_USER", "admin")
@@ -85,6 +85,18 @@ SECRET_KEY = os.environ.get("PORTFOLIO_SECRET") or _local_cfg.get("secret_key")
 if not SECRET_KEY:
     SECRET_KEY = secrets.token_hex(32)
     _local_cfg["secret_key"] = SECRET_KEY
+    try:
+        _save_config(_local_cfg)
+    except Exception:
+        pass
+
+# Jeton secret pour /api/deploy/restart-internal — lu depuis
+# .portfolio_config.json par l'outil local qui redémarre le Portfolio.
+# Remplace l'ancien contrôle d'IP, inopérant derrière le tunnel Cloudflare.
+RESTART_TOKEN = os.environ.get("PORTFOLIO_RESTART_TOKEN") or _local_cfg.get("restart_token")
+if not RESTART_TOKEN:
+    RESTART_TOKEN = secrets.token_hex(32)
+    _local_cfg["restart_token"] = RESTART_TOKEN
     try:
         _save_config(_local_cfg)
     except Exception:
@@ -169,11 +181,18 @@ def _require_same_origin():
         return url
 
     host = _strip_scheme(request.host_url.rstrip("/"))
-    if origin and not _strip_scheme(origin).startswith(host):
-        return jsonify(ok=False, error="Origine non autorisée"), 403
-    if not origin and referer and not _strip_scheme(referer).startswith(host):
-        return jsonify(ok=False, error="Referer non autorisé"), 403
-    return None
+    if origin:
+        if not _strip_scheme(origin).startswith(host):
+            return jsonify(ok=False, error="Origine non autorisée"), 403
+        return None
+    if referer:
+        if not _strip_scheme(referer).startswith(host):
+            return jsonify(ok=False, error="Referer non autorisé"), 403
+        return None
+    # Fail-closed : sans Origin ni Referer, on refuse. Un navigateur envoie
+    # toujours l'un des deux sur une requête mutante same-origin ; leur absence
+    # trahit un appel scripté (curl, etc.).
+    return jsonify(ok=False, error="Origine non vérifiable"), 403
 
 
 @app.route("/")
@@ -357,6 +376,9 @@ def api_deploy_restart():
 
 @deploy_bp.post("/api/deploy/pull-from-404")
 def api_deploy_pull_from_404():
+    if not _logged_in():
+        return jsonify(ok=False, error="Authentification requise",
+                       login_required=True), 401
     chk = _require_same_origin()
     if chk:
         return chk
@@ -386,6 +408,9 @@ def api_deploy_pull_from_404():
 
 @deploy_bp.post("/api/deploy/rollback")
 def api_deploy_rollback():
+    if not _logged_in():
+        return jsonify(ok=False, error="Authentification requise",
+                       login_required=True), 401
     chk = _require_same_origin()
     if chk:
         return chk
@@ -473,9 +498,15 @@ def api_deploy_remote_get():
 
 @deploy_bp.post("/api/deploy/restart-internal")
 def api_deploy_restart_internal():
-    remote = request.environ.get("REMOTE_ADDR") or request.remote_addr or ""
-    if remote not in ("127.0.0.1", "::1"):
-        return jsonify(ok=False, error="Accès refusé — réseau local uniquement"), 403
+    # Authentifié par un jeton secret partagé (RESTART_TOKEN), lu depuis
+    # .portfolio_config.json par l'outil local appelant. L'ancien contrôle
+    # « réseau local uniquement » était inopérant : derrière le tunnel
+    # Cloudflare, REMOTE_ADDR vaut toujours 127.0.0.1 pour toute requête.
+    token = (request.headers.get("X-Restart-Token")
+             or (request.get_json(silent=True) or {}).get("token")
+             or "")
+    if not token or not secrets.compare_digest(str(token), RESTART_TOKEN):
+        return jsonify(ok=False, error="Jeton de redémarrage invalide"), 403
     _schedule_restart(delay=5.0)
     return jsonify(ok=True, message="Redémarrage du Portfolio dans 5 s")
 

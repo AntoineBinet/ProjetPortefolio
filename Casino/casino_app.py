@@ -58,6 +58,10 @@ casino_db.ensure_admin(
     name="admin",
     chips=int(os.environ.get("CASINO_ADMIN_CHIPS", "100000")),
 )
+# Révocation unique des credentials fuités via casino.db versionnée dans git
+# (audit sécurité — faille C1). Idempotent : ne s'exécute qu'au 1er démarrage
+# après déploiement de ce correctif.
+casino_db.purge_compromised_credentials("security_rotation_2026_05_C1")
 
 
 # ── Blueprint ────────────────────────────────────────────────────

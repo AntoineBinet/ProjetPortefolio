@@ -6,7 +6,7 @@
 | **Version auditée** | `0.4.5` — commit `be1827f` |
 | **Périmètre** | `app.py` (Portfolio), `Casino/`, `SiteEntreprise/`, templates Jinja2, JS client, scripts de boot, configuration, historique git complet (105 commits) |
 | **Stack** | Flask 3 / Python · SQLite · JS vanilla (Casino) + React/Vite (SiteEntreprise) · Waitress · tunnel Cloudflare |
-| **Statut** | Rapport initial — **aucune correction appliquée**, en attente de validation |
+| **Statut** | Phase 1 corrigée (C1, C2, C3, H1) — cf. §11 *Journal des corrections*. Phases 2–5 à venir |
 
 ---
 
@@ -688,5 +688,35 @@ intervention :
 
 ---
 
-*Fin du rapport. Aucune modification de code n'a été appliquée. En attente de
-validation pour démarrer la Phase 1.*
+---
+
+## 11. Journal des corrections
+
+### Phase 1 — Failles critiques (version `0.4.6`)
+
+Branche `claude/security-audit-fixes-YfYfc` · couvre **C1, C2, C3, H1**.
+
+- **C1** — `Casino/casino.db` retirée du suivi git (`git rm --cached`) ;
+  `.gitignore` durci (`*.db`, `*.sqlite*`, fichiers annexes `-wal`/`-journal`/`-shm`).
+  Ajout de `casino_db.purge_compromised_credentials()` : au premier redémarrage
+  après déploiement, **toutes les sessions Casino et les invitations non
+  consommées sont révoquées** (idempotent, repéré par un flag en base). La purge
+  de l'historique git reste à exécuter — opération destructive dédiée, cf. §10.
+- **C2** — `/api/deploy/pull-from-404` et `/api/deploy/rollback` exigent
+  désormais une session admin (réponse `401` sinon). `_require_same_origin()`
+  rendu *fail-closed* (refus si ni `Origin` ni `Referer`). Les boutons des pages
+  404/500 redirigent vers `/login` si l'utilisateur n'est pas connecté.
+- **C3** — le déclenchement de la chaîne de mise à jour est maintenant
+  authentifié (conséquence directe de C2). La vérification de signature des
+  commits (GPG) reste planifiée en Phase 5.
+- **H1** — `/api/deploy/restart-internal` : le contrôle d'IP (inopérant derrière
+  le tunnel) est remplacé par un **jeton secret partagé** (`RESTART_TOKEN`,
+  généré dans `.portfolio_config.json`, transmis via l'en-tête
+  `X-Restart-Token`).
+
+*Phases 2 à 5 : non démarrées. Les questions de choix architecturaux sont posées
+avant chaque phase.*
+
+---
+
+*Fin du rapport.*
