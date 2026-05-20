@@ -380,6 +380,24 @@ def gc_sessions() -> int:
         return cn.total_changes
 
 
+def purge_compromised_credentials(flag: str) -> int:
+    """Révoque en une fois TOUTES les sessions et invitations non consommées.
+
+    Neutralise les jetons qui ont fuité via la base casino.db versionnée par
+    erreur dans un dépôt git public (audit sécurité — faille C1). Idempotent :
+    repéré par `flag` dans kv_settings, ne s'exécute donc qu'une seule fois.
+    Renvoie le nombre de lignes supprimées (0 si déjà exécuté auparavant).
+    """
+    if kv_get(flag):
+        return 0
+    with db() as cn:
+        cn.execute("DELETE FROM sessions")
+        cn.execute("DELETE FROM invites WHERE used_by IS NULL")
+        removed = cn.total_changes
+    kv_set(flag, str(int(time.time())))
+    return removed
+
+
 # ── Bootstrap admin ──────────────────────────────────────────────
 
 def ensure_admin(name: str = "Antoine", chips: int = 100000) -> str:

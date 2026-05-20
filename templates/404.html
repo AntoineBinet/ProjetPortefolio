@@ -26,6 +26,11 @@
     status.textContent = "Mise à jour en cours…";
     try {
       const r = await fetch("/api/deploy/pull-from-404", { method: "POST" });
+      if (r.status === 401) {
+        status.textContent = "Connexion admin requise — redirection…";
+        setTimeout(() => location.href = "/login?next=/admin/parametres", 900);
+        return;
+      }
       const d = await r.json();
       status.textContent = d.ok ? d.message : ("Erreur : " + d.error);
       if (d.ok) setTimeout(() => location.href = "/", 8000);

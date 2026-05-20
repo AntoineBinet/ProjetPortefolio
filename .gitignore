@@ -10,6 +10,15 @@ logs/
 .env
 .portfolio_config.json
 .demandes_modifs.json
+
+# Bases SQLite — ne JAMAIS versionner (jetons de session, données utilisateurs)
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
 .DS_Store
 Thumbs.db
 
