@@ -26,6 +26,7 @@ export default function Footer() {
               <li><NavGuardLink href="#carriere">Carrière</NavGuardLink></li>
               <li><NavGuardLink href="#agences">Nos Agences</NavGuardLink></li>
               <li><NavGuardLink href="#actualites">Actualités</NavGuardLink></li>
+              <li><NavGuardLink href="/site-entreprise/pack-logo.html" target="_blank" rel="noopener noreferrer">Logo</NavGuardLink></li>
             </ul>
           </div>
           <div>
