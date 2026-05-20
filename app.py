@@ -31,12 +31,14 @@ from flask import (
     url_for,
 )
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.security import check_password_hash, generate_password_hash
 
-APP_VERSION = "0.4.6"
+import ratelimit
+
+APP_VERSION = "0.4.7"
 APP_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORTFOLIO_PORT", "8001"))
 ADMIN_USER = os.environ.get("PORTFOLIO_USER", "admin")
-ADMIN_PASS = os.environ.get("PORTFOLIO_PASS", "admin")
 
 CONFIG_FILE = APP_DIR / ".portfolio_config.json"
 DEMANDES_FILE = APP_DIR / ".demandes_modifs.json"
@@ -73,10 +75,20 @@ def _now_iso() -> str:
 
 
 _local_cfg = _load_config()
-if _local_cfg.get("admin_pass"):
-    ADMIN_PASS = _local_cfg["admin_pass"]
 if _local_cfg.get("admin_user"):
     ADMIN_USER = _local_cfg["admin_user"]
+
+# Mot de passe admin — stocké haché (jamais en clair). Migration : un ancien
+# champ `admin_pass` en clair dans .portfolio_config.json est haché puis effacé.
+ADMIN_PASS_HASH = _local_cfg.get("admin_pass_hash")
+if not ADMIN_PASS_HASH and _local_cfg.get("admin_pass"):
+    ADMIN_PASS_HASH = generate_password_hash(_local_cfg["admin_pass"])
+    _local_cfg["admin_pass_hash"] = ADMIN_PASS_HASH
+    _local_cfg.pop("admin_pass", None)
+    try:
+        _save_config(_local_cfg)
+    except Exception:
+        pass
 
 # Persist a stable Flask secret_key across restarts so that /maj (which
 # triggers a process restart) doesn't invalidate every session cookie. Order:
@@ -101,6 +113,25 @@ if not RESTART_TOKEN:
         _save_config(_local_cfg)
     except Exception:
         pass
+
+
+def _verify_admin_password(p: str) -> bool:
+    """Vérifie le mot de passe admin Portfolio.
+
+    Priorité : variable d'env PORTFOLIO_PASS (mot de passe en clair fixé au
+    déploiement) > hash werkzeug stocké dans .portfolio_config.json > défaut.
+    """
+    env_pass = os.environ.get("PORTFOLIO_PASS")
+    if env_pass:
+        return secrets.compare_digest(p, env_pass)
+    if ADMIN_PASS_HASH:
+        return check_password_hash(ADMIN_PASS_HASH, p)
+    return secrets.compare_digest(p, "admin")
+
+
+def _using_default_password() -> bool:
+    """True tant que le mot de passe « admin » fonctionne encore."""
+    return _verify_admin_password("admin")
 
 STUDIO_NAME = os.environ.get("PORTFOLIO_NAME", "Antoine Binet")
 STUDIO_TAGLINE = os.environ.get(
@@ -209,12 +240,21 @@ def apps_page():
 def login():
     error = None
     if request.method == "POST":
+        rl_key = f"portfolio-login:{ratelimit.client_ip()}"
+        wait = ratelimit.retry_after(rl_key)
+        if wait > 0:
+            return render_template(
+                "login.html",
+                error=f"Trop de tentatives. Réessaie dans {int(wait // 60) + 1} min.",
+            ), 429
         u = (request.form.get("username") or "").strip()
         p = (request.form.get("password") or "").strip()
-        if u == ADMIN_USER and p == ADMIN_PASS:
+        if secrets.compare_digest(u, ADMIN_USER) and _verify_admin_password(p):
+            ratelimit.reset(rl_key)
             session["user"] = u
             session.permanent = True
             return redirect(request.args.get("next") or url_for("admin_parametres"))
+        ratelimit.register_failure(rl_key)
         error = "Identifiants invalides"
     return render_template("login.html", error=error)
 
@@ -233,6 +273,7 @@ def admin_parametres():
             "admin/parametres.html",
             app_dir=str(APP_DIR),
             user=session.get("user"),
+            must_change_password=_using_default_password(),
         )
     except Exception:
         app.logger.exception("admin_parametres render failed")
@@ -273,6 +314,26 @@ def _schedule_restart(delay: float = 10.0):
 
 
 deploy_bp = Blueprint("deploy", __name__)
+
+# Tant que le mot de passe admin est resté « admin », toute opération de
+# déploiement est bloquée — seul le changement de mot de passe est autorisé.
+_DEFAULT_PW_ALLOWED = {
+    "deploy.api_change_password",
+    "deploy.api_deploy_health",
+    "deploy.api_prospup_status",
+}
+
+
+@deploy_bp.before_request
+def _block_while_default_password():
+    if not _logged_in() or not _using_default_password():
+        return None
+    if request.endpoint in _DEFAULT_PW_ALLOWED:
+        return None
+    return jsonify(
+        ok=False, must_change_password=True,
+        error="Mot de passe par défaut actif — change-le avant toute autre opération.",
+    ), 403
 
 
 def _git(*args, timeout=10):
@@ -461,15 +522,23 @@ def api_deploy_health():
 def api_change_password():
     if not _logged_in():
         return jsonify(ok=False, error="Non autorisé — reconnecte-toi"), 401
+    chk = _require_same_origin()
+    if chk:
+        return chk
     data = request.get_json(silent=True) or {}
+    old_pass = (data.get("old_password") or "").strip()
     new_pass = (data.get("password") or "").strip()
-    if len(new_pass) < 4:
-        return jsonify(ok=False, error="Mot de passe trop court (min 4 caractères)"), 400
-    global ADMIN_PASS
-    ADMIN_PASS = new_pass
-    cfg = _load_config()
-    cfg["admin_pass"] = new_pass
-    _save_config(cfg)
+    if not _verify_admin_password(old_pass):
+        return jsonify(ok=False, error="Mot de passe actuel incorrect"), 403
+    if len(new_pass) < 8:
+        return jsonify(ok=False, error="Mot de passe trop court (min 8 caractères)"), 400
+    if new_pass.lower() == "admin" or _verify_admin_password(new_pass):
+        return jsonify(ok=False, error="Choisis un mot de passe différent de l'actuel et autre que « admin »."), 400
+    global ADMIN_PASS_HASH
+    ADMIN_PASS_HASH = generate_password_hash(new_pass)
+    _local_cfg["admin_pass_hash"] = ADMIN_PASS_HASH
+    _local_cfg.pop("admin_pass", None)
+    _save_config(_local_cfg)
     return jsonify(ok=True, message="Mot de passe mis à jour")
 
 

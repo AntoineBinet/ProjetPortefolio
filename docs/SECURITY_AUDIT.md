@@ -6,7 +6,7 @@
 | **Version auditée** | `0.4.5` — commit `be1827f` |
 | **Périmètre** | `app.py` (Portfolio), `Casino/`, `SiteEntreprise/`, templates Jinja2, JS client, scripts de boot, configuration, historique git complet (105 commits) |
 | **Stack** | Flask 3 / Python · SQLite · JS vanilla (Casino) + React/Vite (SiteEntreprise) · Waitress · tunnel Cloudflare |
-| **Statut** | Phase 1 corrigée (C1, C2, C3, H1) — cf. §11 *Journal des corrections*. Phases 2–5 à venir |
+| **Statut** | Phases 1–2 corrigées — cf. §11 *Journal des corrections*. Phases 3–5 à venir |
 
 ---
 
@@ -701,7 +701,9 @@ Branche `claude/security-audit-fixes-YfYfc` · couvre **C1, C2, C3, H1**.
   Ajout de `casino_db.purge_compromised_credentials()` : au premier redémarrage
   après déploiement, **toutes les sessions Casino et les invitations non
   consommées sont révoquées** (idempotent, repéré par un flag en base). La purge
-  de l'historique git reste à exécuter — opération destructive dédiée, cf. §10.
+  de l'historique git a été **déclinée** par le propriétaire : les jetons étant
+  déjà neutralisés par la rotation, le risque résiduel (IPs / pseudos encore
+  visibles dans l'historique public) est accepté.
 - **C2** — `/api/deploy/pull-from-404` et `/api/deploy/rollback` exigent
   désormais une session admin (réponse `401` sinon). `_require_same_origin()`
   rendu *fail-closed* (refus si ni `Origin` ni `Referer`). Les boutons des pages
@@ -714,7 +716,26 @@ Branche `claude/security-audit-fixes-YfYfc` · couvre **C1, C2, C3, H1**.
   généré dans `.portfolio_config.json`, transmis via l'en-tête
   `X-Restart-Token`).
 
-*Phases 2 à 5 : non démarrées. Les questions de choix architecturaux sont posées
+### Phase 2 — Authentification & secrets (version `0.4.7`)
+
+Couvre **H2, H5, M4**.
+
+- **H2** — rate-limiter maison en mémoire (`ratelimit.py`) appliqué aux 4 points
+  d'entrée d'authentification (login Portfolio, admin-login & redeem Casino,
+  login SiteEntreprise) : 8 échecs en 5 min → blocage 15 min, réponse `429`. Les
+  `time.sleep` du Casino (qui monopolisaient un thread Waitress) sont supprimés.
+  Mot de passe par défaut « admin » du Portfolio : tant qu'il est actif, toute
+  opération de déploiement est bloquée côté serveur (`before_request`) — seul le
+  changement de mot de passe reste permis, signalé par un bandeau d'alerte.
+- **H5** — le mot de passe admin Portfolio est désormais **haché** (werkzeug) ;
+  plus aucun mot de passe en clair sur disque. Migration automatique d'un
+  éventuel ancien `admin_pass` en clair dans `.portfolio_config.json`.
+- **M4** — `/api/deploy/change-password` exige le mot de passe actuel, impose un
+  minimum de 8 caractères, refuse « admin » et la réutilisation du mot de passe
+  courant, et applique le contrôle same-origin. Longueurs minimales alignées à
+  8 caractères sur les trois entités.
+
+*Phases 3 à 5 : non démarrées. Les questions de choix architecturaux sont posées
 avant chaque phase.*
 
 ---

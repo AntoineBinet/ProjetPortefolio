@@ -68,9 +68,9 @@ def must_change_password() -> bool:
 
 
 def set_password(new_password: str) -> None:
-    """Change le mot de passe. Min 4 caractères. Marque comme changé."""
-    if not new_password or len(new_password) < 4:
-        raise ValueError("Mot de passe trop court (min 4 caractères)")
+    """Change le mot de passe. Min 8 caractères. Marque comme changé."""
+    if not new_password or len(new_password) < 8:
+        raise ValueError("Mot de passe trop court (min 8 caractères)")
     with _lock:
         _save({
             "hash": generate_password_hash(new_password),

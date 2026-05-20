@@ -37,6 +37,8 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
+import ratelimit
+
 from . import site_db
 
 site_entreprise_bp = Blueprint(
@@ -115,10 +117,16 @@ def api_auth_me():
 
 @site_entreprise_bp.post("/api/auth/login")
 def api_auth_login():
+    rl_key = f"site-login:{ratelimit.client_ip()}"
+    wait = ratelimit.retry_after(rl_key)
+    if wait > 0:
+        return jsonify(ok=False, error=f"Trop de tentatives. Réessaie dans {int(wait // 60) + 1} min."), 429
     body = request.get_json(silent=True) or {}
     pwd = body.get("password") or ""
     if not site_db.verify_password(pwd):
+        ratelimit.register_failure(rl_key)
         return jsonify(ok=False, error="Mot de passe incorrect"), 401
+    ratelimit.reset(rl_key)
     session["site_authed"] = True
     session.permanent = True
     return jsonify(ok=True, **_auth_status())
