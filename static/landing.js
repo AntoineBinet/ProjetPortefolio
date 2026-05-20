@@ -1,7 +1,10 @@
 // Landing — scroll-snap nav, IntersectionObserver, search, keyboard.
 
 (function () {
-  const projects = window.PROJECTS || [];
+  const projectsEl = document.getElementById('projects-data');
+  let projects = [];
+  try { projects = JSON.parse((projectsEl && projectsEl.textContent) || '[]'); }
+  catch (e) { projects = []; }
   const snap = document.getElementById('snap');
   const sections = Array.from(document.querySelectorAll('.snap-section'));
   const indicator = document.getElementById('sectionIndicator');

@@ -35,7 +35,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import ratelimit
 
-APP_VERSION = "0.4.7"
+APP_VERSION = "0.4.8"
 APP_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORTFOLIO_PORT", "8001"))
 ADMIN_USER = os.environ.get("PORTFOLIO_USER", "admin")
@@ -151,6 +151,14 @@ app.secret_key = SECRET_KEY
 # https:// instead of http://, fixing the _require_same_origin() check.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
+# Cookie de session : HttpOnly + SameSite=Lax toujours ; Secure en prod (HTTPS
+# via Cloudflare). En dev HTTP local, Secure empêcherait l'envoi du cookie.
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=("--prod" in sys.argv),
+)
+
 if not app.logger.handlers:
     _h = logging.StreamHandler()
     _h.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s %(message)s"))
@@ -165,6 +173,34 @@ def _no_cache_html(resp):
         resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         resp.headers["Pragma"] = "no-cache"
         resp.headers["Expires"] = "0"
+    return resp
+
+
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self'; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com; "
+    "img-src 'self' data: https:; "
+    "connect-src 'self'; "
+    "frame-src 'self'; "
+    "frame-ancestors 'self'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "object-src 'none'"
+)
+
+
+@app.after_request
+def _security_headers(resp):
+    # setdefault : une route qui pose sa propre CSP (uploads) n'est pas écrasée.
+    resp.headers.setdefault("Content-Security-Policy", _CSP)
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "SAMEORIGIN"
+    resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    resp.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    if request.is_secure:
+        resp.headers["Strict-Transport-Security"] = "max-age=31536000"
     return resp
 
 
@@ -431,6 +467,9 @@ def api_deploy_pull():
 @deploy_bp.post("/api/deploy/restart")
 @login_required
 def api_deploy_restart():
+    chk = _require_same_origin()
+    if chk:
+        return chk
     _schedule_restart(delay=5.0)
     return jsonify(ok=True, message="Redémarrage dans 5 s")
 
@@ -602,28 +641,9 @@ def _make_launch_html():
         "<body>",
         "  <h1>&#9888;&#65039; Relancer ProspUp</h1>",
         "  <p>Effectue un <code>git pull</code> dans le dossier ProspUp puis lance <code>python app.py --prod</code>.</p>",
-        '  <button id="btn" onclick="doLaunch()">&#9654; Lancer ProspUp maintenant</button>',
+        '  <button id="btn">&#9654; Lancer ProspUp maintenant</button>',
         '  <pre id="out">En attente...</pre>',
-        "  <script>",
-        "    function doLaunch() {",
-        "      var btn = document.getElementById('btn');",
-        "      var out = document.getElementById('out');",
-        "      btn.disabled = true;",
-        "      out.textContent = 'Lancement en cours...';",
-        "      fetch('/api/deploy/launch-prospup', {method:'POST'})",
-        "        .then(function(r){return r.json();})",
-        "        .then(function(d){",
-        "          out.className = d.ok ? 'ok' : 'err';",
-        "          out.textContent = JSON.stringify(d, null, 2);",
-        "          if (d.ok) { out.textContent += ' ProspUp en cours de demarrage. Attends 20 s.'; }",
-        "        })",
-        "        .catch(function(e){",
-        "          out.className = 'err';",
-        "          out.textContent = 'Erreur : ' + e.message;",
-        "          btn.disabled = false;",
-        "        });",
-        "    }",
-        "  </script>",
+        '  <script src="/static/launch-prospup.js"></script>',
         "</body>",
         "</html>",
     ]
@@ -639,6 +659,9 @@ def api_deploy_launch_prospup_page():
 @deploy_bp.post("/api/deploy/launch-prospup")
 @login_required
 def api_deploy_launch_prospup():
+    chk = _require_same_origin()
+    if chk:
+        return chk
     prospup_dir = None
     candidates = [
         os.environ.get("PROSPUP_DIR"),

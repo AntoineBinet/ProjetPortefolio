@@ -1,5 +1,16 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import DOMPurify from 'dompurify';
 import { useAdmin, useEditable, getByPath } from './AdminContext';
+
+// N'autorise que les URL sûres (http/https/mailto/tel/ancres/chemins relatifs) —
+// bloque notamment javascript:. allowData : autorise en plus les data:image/*.
+function safeUrl(u, { allowData = false } = {}) {
+  const s = String(u ?? '').trim();
+  if (!s) return '#';
+  if (/^(https?:|mailto:|tel:|#|\/|\.)/i.test(s)) return s;
+  if (allowData && /^data:image\//i.test(s)) return s;
+  return '#';
+}
 
 /**
  * Lien éditable : en mode lecture, c'est un simple <a>. En mode admin, le
@@ -16,7 +27,7 @@ export function EditableLink({ path, children, href, className = '', onClick, ta
   const { content, setField } = useAdmin();
   const isEdit = useEditable();
   const stored = path ? getByPath(content, path) : undefined;
-  const url = stored ?? href ?? '#';
+  const url = safeUrl(stored ?? href ?? '#');
 
   const onEditUrl = useCallback((e) => {
     e.preventDefault();
@@ -116,7 +127,8 @@ export function Editable({
     if (!isEdit || !ref.current) return;
     if (document.activeElement === ref.current) return;
     if (html) {
-      if (ref.current.innerHTML !== (display || '')) ref.current.innerHTML = display || '';
+      const safe = DOMPurify.sanitize(display || '');
+      if (ref.current.innerHTML !== safe) ref.current.innerHTML = safe;
     } else {
       if (ref.current.innerText !== (display || '')) ref.current.innerText = display || '';
     }
@@ -124,7 +136,9 @@ export function Editable({
 
   const onBlur = useCallback((e) => {
     if (!path) return;
-    const next = html ? e.currentTarget.innerHTML : e.currentTarget.innerText;
+    const next = html
+      ? DOMPurify.sanitize(e.currentTarget.innerHTML)
+      : e.currentTarget.innerText;
     if (next !== value) setField(path, next);
   }, [path, value, html, setField]);
 
@@ -139,7 +153,7 @@ export function Editable({
 
   if (!isEdit) {
     if (html) {
-      return <Tag className={className} dangerouslySetInnerHTML={{ __html: display }} {...rest} />;
+      return <Tag className={className} dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(display) }} {...rest} />;
     }
     return <Tag className={className} {...rest}>{display}</Tag>;
   }
@@ -155,7 +169,7 @@ export function Editable({
         onBlur={onBlur}
         onKeyDown={onKeyDown}
         data-ed-path={path}
-        dangerouslySetInnerHTML={{ __html: display }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(display) }}
         {...rest}
       />
     );
@@ -193,7 +207,7 @@ export function EditableImage({ path, src, alt = '', className = '', ...rest }) 
 
   const overridePath = path ? `imageOverrides.${path}` : null;
   const override = overridePath ? getByPath(content, overridePath) : null;
-  const finalSrc = override || src;
+  const finalSrc = safeUrl(override || src, { allowData: true });
 
   const onPick = useCallback((e) => {
     const f = e.target.files && e.target.files[0];

@@ -181,7 +181,14 @@ def api_upload():
 def serve_upload(filename):
     if not _UPLOADS_DIR.exists():
         abort(404)
-    return send_from_directory(_UPLOADS_DIR, filename, max_age=31_536_000)
+    # Durcissement : un fichier uploadé (un SVG notamment) ne doit jamais
+    # pouvoir exécuter de script. Téléchargement forcé en navigation directe,
+    # CSP verrouillée, pas de MIME sniffing.
+    resp = send_from_directory(_UPLOADS_DIR, filename, max_age=31_536_000,
+                               as_attachment=True)
+    resp.headers["Content-Security-Policy"] = "default-src 'none'; sandbox"
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    return resp
 
 
 # ---------------- Static SPA ----------------

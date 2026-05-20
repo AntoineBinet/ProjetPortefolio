@@ -6,7 +6,7 @@
 | **Version auditée** | `0.4.5` — commit `be1827f` |
 | **Périmètre** | `app.py` (Portfolio), `Casino/`, `SiteEntreprise/`, templates Jinja2, JS client, scripts de boot, configuration, historique git complet (105 commits) |
 | **Stack** | Flask 3 / Python · SQLite · JS vanilla (Casino) + React/Vite (SiteEntreprise) · Waitress · tunnel Cloudflare |
-| **Statut** | Phases 1–2 corrigées — cf. §11 *Journal des corrections*. Phases 3–5 à venir |
+| **Statut** | Phases 1–3 corrigées — cf. §11 *Journal des corrections*. Phases 4–5 à venir |
 
 ---
 
@@ -735,8 +735,31 @@ Couvre **H2, H5, M4**.
   courant, et applique le contrôle same-origin. Longueurs minimales alignées à
   8 caractères sur les trois entités.
 
-*Phases 3 à 5 : non démarrées. Les questions de choix architecturaux sont posées
-avant chaque phase.*
+### Phase 3 — XSS, CMS, upload, en-têtes (version `0.4.8`)
+
+Couvre **H3, H4, M1, M2, M3**.
+
+- **H3** — XSS stocké du CMS neutralisé côté client : tout le HTML rendu par
+  `Editable.jsx` (lecture, édition, sauvegarde) passe désormais par DOMPurify ;
+  les URL des liens et images éditables sont validées (schéma `javascript:`
+  rejeté). Bundle React reconstruit.
+- **H4** — les fichiers uploadés (SVG compris) sont servis avec
+  `Content-Disposition: attachment`, une CSP `default-src 'none'; sandbox` et
+  `X-Content-Type-Options: nosniff` : un SVG malveillant ne peut plus exécuter
+  de script.
+- **M1** — en-têtes de sécurité ajoutés à toutes les réponses : **CSP stricte**
+  (`script-src 'self'` — tous les scripts inline sortis dans des fichiers
+  `static/*.js`, plus aucun `onclick` inline), `X-Content-Type-Options`,
+  `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy`, `Permissions-Policy`, et
+  `Strict-Transport-Security` (réponses HTTPS). Absence de violation CSP
+  vérifiée en navigateur (Chromium) sur les 6 types de pages.
+- **M2** — cookie de session Portfolio : `HttpOnly` + `SameSite=Lax` + `Secure`
+  en production.
+- **M3** — contrôle same-origin étendu à `change-password`, `restart` et
+  `launch-prospup`.
+
+*Phases 4 et 5 : non démarrées. Les questions de choix architecturaux sont
+posées avant chaque phase.*
 
 ---
 
