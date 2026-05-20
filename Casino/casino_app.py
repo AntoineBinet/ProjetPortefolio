@@ -38,6 +38,8 @@ from threading import Lock
 
 from flask import Blueprint, Response, jsonify, request, send_from_directory
 
+import ratelimit
+
 from . import casino_db
 
 
@@ -188,13 +190,18 @@ def api_me():
 def api_admin_login():
     chk = _require_same_origin()
     if chk: return chk
+    rl_key = f"casino-admin-login:{ratelimit.client_ip()}"
+    wait = ratelimit.retry_after(rl_key)
+    if wait > 0:
+        return jsonify(ok=False, error=f"Trop de tentatives. Réessaie dans {int(wait // 60) + 1} min."), 429
     data = request.get_json(silent=True) or {}
     user_in = (data.get("username") or "").strip()
     pwd = (data.get("password") or "").strip()
     expected_user = casino_db.get_admin_username()
     if not secrets.compare_digest(user_in, expected_user) or not casino_db.check_admin_password(pwd):
-        time.sleep(0.5)
+        ratelimit.register_failure(rl_key)
         return jsonify(ok=False, error="Identifiants invalides"), 401
+    ratelimit.reset(rl_key)
     admin_id = casino_db.ensure_admin(
         name="admin",
         chips=int(os.environ.get("CASINO_ADMIN_CHIPS", "100000")),
@@ -227,10 +234,9 @@ def api_admin_change_password():
     old = (data.get("old_password") or "").strip()
     new = (data.get("new_password") or "").strip()
     new_user = (data.get("new_username") or "").strip()
-    if len(new) < 6:
-        return jsonify(ok=False, error="Nouveau mot de passe trop court (min 6)"), 400
+    if len(new) < 8:
+        return jsonify(ok=False, error="Nouveau mot de passe trop court (min 8)"), 400
     if not casino_db.check_admin_password(old):
-        time.sleep(0.5)
         return jsonify(ok=False, error="Ancien mot de passe incorrect"), 401
     casino_db.set_admin_password(new)
     if new_user and new_user != casino_db.get_admin_username():
@@ -272,6 +278,10 @@ def api_invite_info(iid: str):
 def api_redeem():
     chk = _require_same_origin()
     if chk: return chk
+    rl_key = f"casino-redeem:{ratelimit.client_ip()}"
+    wait = ratelimit.retry_after(rl_key)
+    if wait > 0:
+        return jsonify(ok=False, error=f"Trop de tentatives. Réessaie dans {int(wait // 60) + 1} min."), 429
     data = request.get_json(silent=True) or {}
     iid = (data.get("invite_id") or "").strip()
     code = (data.get("code") or "").strip().upper()
@@ -280,8 +290,9 @@ def api_redeem():
     try:
         token, user = casino_db.redeem_invite(iid, code, name, avatar_seed=avatar)
     except ValueError as e:
-        time.sleep(0.4)
+        ratelimit.register_failure(rl_key)
         return jsonify(ok=False, error=str(e)), 400
+    ratelimit.reset(rl_key)
     resp = jsonify(ok=True, user=_user_payload(user))
     _set_casino_cookie(resp, token)
     return resp

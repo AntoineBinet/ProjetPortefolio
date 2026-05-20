@@ -31,12 +31,14 @@ from flask import (
     url_for,
 )
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.security import check_password_hash, generate_password_hash
 
-APP_VERSION = "0.4.6"
+import ratelimit
+
+APP_VERSION = "0.4.8"
 APP_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORTFOLIO_PORT", "8001"))
 ADMIN_USER = os.environ.get("PORTFOLIO_USER", "admin")
-ADMIN_PASS = os.environ.get("PORTFOLIO_PASS", "admin")
 
 CONFIG_FILE = APP_DIR / ".portfolio_config.json"
 DEMANDES_FILE = APP_DIR / ".demandes_modifs.json"
@@ -73,10 +75,20 @@ def _now_iso() -> str:
 
 
 _local_cfg = _load_config()
-if _local_cfg.get("admin_pass"):
-    ADMIN_PASS = _local_cfg["admin_pass"]
 if _local_cfg.get("admin_user"):
     ADMIN_USER = _local_cfg["admin_user"]
+
+# Mot de passe admin — stocké haché (jamais en clair). Migration : un ancien
+# champ `admin_pass` en clair dans .portfolio_config.json est haché puis effacé.
+ADMIN_PASS_HASH = _local_cfg.get("admin_pass_hash")
+if not ADMIN_PASS_HASH and _local_cfg.get("admin_pass"):
+    ADMIN_PASS_HASH = generate_password_hash(_local_cfg["admin_pass"])
+    _local_cfg["admin_pass_hash"] = ADMIN_PASS_HASH
+    _local_cfg.pop("admin_pass", None)
+    try:
+        _save_config(_local_cfg)
+    except Exception:
+        pass
 
 # Persist a stable Flask secret_key across restarts so that /maj (which
 # triggers a process restart) doesn't invalidate every session cookie. Order:
@@ -102,6 +114,25 @@ if not RESTART_TOKEN:
     except Exception:
         pass
 
+
+def _verify_admin_password(p: str) -> bool:
+    """Vérifie le mot de passe admin Portfolio.
+
+    Priorité : variable d'env PORTFOLIO_PASS (mot de passe en clair fixé au
+    déploiement) > hash werkzeug stocké dans .portfolio_config.json > défaut.
+    """
+    env_pass = os.environ.get("PORTFOLIO_PASS")
+    if env_pass:
+        return secrets.compare_digest(p, env_pass)
+    if ADMIN_PASS_HASH:
+        return check_password_hash(ADMIN_PASS_HASH, p)
+    return secrets.compare_digest(p, "admin")
+
+
+def _using_default_password() -> bool:
+    """True tant que le mot de passe « admin » fonctionne encore."""
+    return _verify_admin_password("admin")
+
 STUDIO_NAME = os.environ.get("PORTFOLIO_NAME", "Antoine Binet")
 STUDIO_TAGLINE = os.environ.get(
     "PORTFOLIO_TAGLINE",
@@ -120,6 +151,14 @@ app.secret_key = SECRET_KEY
 # https:// instead of http://, fixing the _require_same_origin() check.
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
+# Cookie de session : HttpOnly + SameSite=Lax toujours ; Secure en prod (HTTPS
+# via Cloudflare). En dev HTTP local, Secure empêcherait l'envoi du cookie.
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=("--prod" in sys.argv),
+)
+
 if not app.logger.handlers:
     _h = logging.StreamHandler()
     _h.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s %(message)s"))
@@ -134,6 +173,34 @@ def _no_cache_html(resp):
         resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
         resp.headers["Pragma"] = "no-cache"
         resp.headers["Expires"] = "0"
+    return resp
+
+
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self'; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com; "
+    "img-src 'self' data: https:; "
+    "connect-src 'self'; "
+    "frame-src 'self'; "
+    "frame-ancestors 'self'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "object-src 'none'"
+)
+
+
+@app.after_request
+def _security_headers(resp):
+    # setdefault : une route qui pose sa propre CSP (uploads) n'est pas écrasée.
+    resp.headers.setdefault("Content-Security-Policy", _CSP)
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "SAMEORIGIN"
+    resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    resp.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    if request.is_secure:
+        resp.headers["Strict-Transport-Security"] = "max-age=31536000"
     return resp
 
 
@@ -209,12 +276,21 @@ def apps_page():
 def login():
     error = None
     if request.method == "POST":
+        rl_key = f"portfolio-login:{ratelimit.client_ip()}"
+        wait = ratelimit.retry_after(rl_key)
+        if wait > 0:
+            return render_template(
+                "login.html",
+                error=f"Trop de tentatives. Réessaie dans {int(wait // 60) + 1} min.",
+            ), 429
         u = (request.form.get("username") or "").strip()
         p = (request.form.get("password") or "").strip()
-        if u == ADMIN_USER and p == ADMIN_PASS:
+        if secrets.compare_digest(u, ADMIN_USER) and _verify_admin_password(p):
+            ratelimit.reset(rl_key)
             session["user"] = u
             session.permanent = True
             return redirect(request.args.get("next") or url_for("admin_parametres"))
+        ratelimit.register_failure(rl_key)
         error = "Identifiants invalides"
     return render_template("login.html", error=error)
 
@@ -233,6 +309,7 @@ def admin_parametres():
             "admin/parametres.html",
             app_dir=str(APP_DIR),
             user=session.get("user"),
+            must_change_password=_using_default_password(),
         )
     except Exception:
         app.logger.exception("admin_parametres render failed")
@@ -273,6 +350,26 @@ def _schedule_restart(delay: float = 10.0):
 
 
 deploy_bp = Blueprint("deploy", __name__)
+
+# Tant que le mot de passe admin est resté « admin », toute opération de
+# déploiement est bloquée — seul le changement de mot de passe est autorisé.
+_DEFAULT_PW_ALLOWED = {
+    "deploy.api_change_password",
+    "deploy.api_deploy_health",
+    "deploy.api_prospup_status",
+}
+
+
+@deploy_bp.before_request
+def _block_while_default_password():
+    if not _logged_in() or not _using_default_password():
+        return None
+    if request.endpoint in _DEFAULT_PW_ALLOWED:
+        return None
+    return jsonify(
+        ok=False, must_change_password=True,
+        error="Mot de passe par défaut actif — change-le avant toute autre opération.",
+    ), 403
 
 
 def _git(*args, timeout=10):
@@ -370,6 +467,9 @@ def api_deploy_pull():
 @deploy_bp.post("/api/deploy/restart")
 @login_required
 def api_deploy_restart():
+    chk = _require_same_origin()
+    if chk:
+        return chk
     _schedule_restart(delay=5.0)
     return jsonify(ok=True, message="Redémarrage dans 5 s")
 
@@ -461,15 +561,23 @@ def api_deploy_health():
 def api_change_password():
     if not _logged_in():
         return jsonify(ok=False, error="Non autorisé — reconnecte-toi"), 401
+    chk = _require_same_origin()
+    if chk:
+        return chk
     data = request.get_json(silent=True) or {}
+    old_pass = (data.get("old_password") or "").strip()
     new_pass = (data.get("password") or "").strip()
-    if len(new_pass) < 4:
-        return jsonify(ok=False, error="Mot de passe trop court (min 4 caractères)"), 400
-    global ADMIN_PASS
-    ADMIN_PASS = new_pass
-    cfg = _load_config()
-    cfg["admin_pass"] = new_pass
-    _save_config(cfg)
+    if not _verify_admin_password(old_pass):
+        return jsonify(ok=False, error="Mot de passe actuel incorrect"), 403
+    if len(new_pass) < 8:
+        return jsonify(ok=False, error="Mot de passe trop court (min 8 caractères)"), 400
+    if new_pass.lower() == "admin" or _verify_admin_password(new_pass):
+        return jsonify(ok=False, error="Choisis un mot de passe différent de l'actuel et autre que « admin »."), 400
+    global ADMIN_PASS_HASH
+    ADMIN_PASS_HASH = generate_password_hash(new_pass)
+    _local_cfg["admin_pass_hash"] = ADMIN_PASS_HASH
+    _local_cfg.pop("admin_pass", None)
+    _save_config(_local_cfg)
     return jsonify(ok=True, message="Mot de passe mis à jour")
 
 
@@ -533,28 +641,9 @@ def _make_launch_html():
         "<body>",
         "  <h1>&#9888;&#65039; Relancer ProspUp</h1>",
         "  <p>Effectue un <code>git pull</code> dans le dossier ProspUp puis lance <code>python app.py --prod</code>.</p>",
-        '  <button id="btn" onclick="doLaunch()">&#9654; Lancer ProspUp maintenant</button>',
+        '  <button id="btn">&#9654; Lancer ProspUp maintenant</button>',
         '  <pre id="out">En attente...</pre>',
-        "  <script>",
-        "    function doLaunch() {",
-        "      var btn = document.getElementById('btn');",
-        "      var out = document.getElementById('out');",
-        "      btn.disabled = true;",
-        "      out.textContent = 'Lancement en cours...';",
-        "      fetch('/api/deploy/launch-prospup', {method:'POST'})",
-        "        .then(function(r){return r.json();})",
-        "        .then(function(d){",
-        "          out.className = d.ok ? 'ok' : 'err';",
-        "          out.textContent = JSON.stringify(d, null, 2);",
-        "          if (d.ok) { out.textContent += ' ProspUp en cours de demarrage. Attends 20 s.'; }",
-        "        })",
-        "        .catch(function(e){",
-        "          out.className = 'err';",
-        "          out.textContent = 'Erreur : ' + e.message;",
-        "          btn.disabled = false;",
-        "        });",
-        "    }",
-        "  </script>",
+        '  <script src="/static/launch-prospup.js"></script>',
         "</body>",
         "</html>",
     ]
@@ -570,6 +659,9 @@ def api_deploy_launch_prospup_page():
 @deploy_bp.post("/api/deploy/launch-prospup")
 @login_required
 def api_deploy_launch_prospup():
+    chk = _require_same_origin()
+    if chk:
+        return chk
     prospup_dir = None
     candidates = [
         os.environ.get("PROSPUP_DIR"),
