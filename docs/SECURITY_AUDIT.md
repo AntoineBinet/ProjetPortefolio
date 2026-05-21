@@ -758,8 +758,59 @@ Couvre **H3, H4, M1, M2, M3**.
 - **M3** — contrôle same-origin étendu à `change-password`, `restart` et
   `launch-prospup`.
 
-*Phases 4 et 5 : non démarrées. Les questions de choix architecturaux sont
-posées avant chaque phase.*
+### Déploiement des Phases 1–3 (21 mai 2026)
+
+- Phases 1–3 (PR #37, PR #38, version `0.4.8`) déployées sur le serveur ;
+  base Casino repartie **vierge** (choix du propriétaire) — rotation C1
+  vérifiée, bandeau « mot de passe par défaut » et blocage serveur des
+  opérations de déploiement vérifiés (`403`).
+- Un `admin_pass_hash` au format incompatible (écrit par le code d'une branche
+  tierce) bloquait le login admin (`HTTP 500`) : retiré de
+  `.portfolio_config.json`, le serveur retombe sur le défaut le temps du
+  changement de mot de passe.
+- L'outil de restart local — slash command `/restart` — a été basculé de
+  `/api/deploy/restart` (session + mot de passe en dur) vers
+  `/api/deploy/restart-internal` + en-tête `X-Restart-Token` : fonctionne
+  quel que soit l'état du mot de passe admin.
+
+### Phase 4 — Durcissement (version `0.4.9`)
+
+Couvre **M5–M12** et **L1–L5**.
+
+- **M5** — `/casino/api/chips/cashout` : plafond glissant des crédits positifs
+  (1 000 000 jetons / 5 min par joueur) + limite de fréquence (60 appels / min)
+  + journalisation des dépassements. Niveau « léger » retenu (jetons = monnaie
+  fictive) : pas d'état de jeu autoritaire côté serveur.
+- **M6** — `/casino/api/room/create` : limite de fréquence par IP (10 rooms /
+  5 min) + plafond global de rooms en mémoire (60) + journalisation. Niveau
+  « léger » : pas d'authentification des joueurs ni de liaison room ↔ session.
+- **M7** — pool de threads Waitress porté de 8 à 32 ; plafond de flux SSE
+  concurrents par IP (6) sur `/casino/api/room/<code>/stream`, via une jauge
+  `acquire`/`release` ajoutée à `ratelimit.py`.
+- **M8** — le serveur écoute sur `127.0.0.1` (et non plus `0.0.0.0`), en prod
+  comme en dev : l'accès direct depuis le LAN, qui contournait le tunnel
+  Cloudflare, est coupé. Confirmé avec le propriétaire (aucun usage LAN).
+- **M9** — conséquence de M8 : le debugger interactif Werkzeug du mode dev
+  n'est plus joignable que depuis la loopback.
+- **M10** — `requirements.txt` : versions exactes figées (`flask==3.1.3`,
+  `waitress==3.0.2`, `werkzeug==3.1.8`).
+- **M11** — `.gitignore` complété (`.claude/worktrees/`). Le hook auto-push
+  passe de `git add -A` (cause racine de la fuite C1) à `git add -u` — fichiers
+  déjà suivis uniquement, plus aucun ajout aveugle de fichier nouveau.
+- **M12** — open redirect sur `/login?next=` corrigé : seuls les chemins
+  relatifs internes sont acceptés (rejet des URL absolues, `//`, des schémas et
+  des antislashs). Vérifié par test.
+- **L1** — `GET /api/deploy/health` exige désormais une session admin.
+- **L2** — `api_invite_info` ne divulgue plus `is_admin` avant redemption.
+- **L3** — l'IP client du Casino est dérivée de `CF-Connecting-IP` (posée par
+  Cloudflare, non falsifiable) plutôt que du `X-Forwarded-For` brut.
+- **L4** — `boot_portfolio.ps1` dérive son chemin de `$PSScriptRoot` — plus de
+  chemin absolu ni de nom d'utilisateur codés en dur.
+- **L5** — les endpoints de déploiement ne renvoient plus la sortie d'erreur
+  git brute : détail journalisé côté serveur, message générique au client.
+
+*Phase 5 : non démarrée. Les questions de choix architecturaux sont posées
+avant chaque phase.*
 
 ---
 

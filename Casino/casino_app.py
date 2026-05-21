@@ -50,6 +50,16 @@ _ROOM_ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 _rooms: dict[str, dict] = {}
 _rooms_lock = Lock()
 
+# M5 — anti-abus du cashout : plafond glissant des crédits positifs par joueur
+_cashout_credits: dict[str, deque] = {}     # user_id -> deque[(ts, montant)]
+_cashout_lock = Lock()
+_CASHOUT_WINDOW = 300.0           # fenêtre glissante : 5 min
+_CASHOUT_MAX_CREDIT = 1_000_000   # crédit positif cumulé max sur la fenêtre
+
+# M6 / M7 — anti-abus du multijoueur
+_MAX_ROOMS = 60                   # nombre total de rooms simultanées en mémoire
+_MAX_SSE_PER_IP = 6               # flux SSE /room/<code>/stream concurrents par IP
+
 # Cookie de session Casino — distinct de la session Portfolio
 CASINO_COOKIE = "casino_session"
 
@@ -73,8 +83,10 @@ casino_bp = Blueprint("casino", __name__)
 # ── Helpers HTTP ─────────────────────────────────────────────────
 
 def _client_ip() -> str:
-    return (request.headers.get("X-Forwarded-For") or
-            request.remote_addr or "")[:64]
+    # L3 — derrière le tunnel Cloudflare, CF-Connecting-IP porte l'IP réelle
+    # (posée par Cloudflare, non falsifiable) ; X-Forwarded-For brut est
+    # usurpable et ne sert plus que de repli. Logique partagée avec ratelimit.
+    return ratelimit.client_ip()[:64]
 
 
 def _require_same_origin():
@@ -265,10 +277,11 @@ def api_invite_info(iid: str):
         return jsonify(ok=False, error="Lien invalide ou déjà utilisé"), 404
     if inv.get("expires_at") and inv["expires_at"] < time.time():
         return jsonify(ok=False, error="Lien expiré"), 410
+    # L2 — `is_admin` n'est plus divulgué avant redemption : l'écran de
+    # redemption n'a besoin que des jetons, de l'expiration et de la note.
     return jsonify(ok=True, invite={
         "id": inv["id"],
         "starting_chips": int(inv["starting_chips"]),
-        "is_admin": bool(inv["is_admin"]),
         "expires_at": inv["expires_at"],
         "note": inv.get("note") or "",
     })
@@ -423,13 +436,37 @@ def api_chips_cashout():
     if err: return err
     chk = _require_same_origin()
     if chk: return chk
+    uid = user.get("user_id") or user.get("id")
+
+    # M5 — limite de fréquence : coupe les boucles d'auto-crédit de jetons.
+    rl_key = f"casino-cashout:{uid}"
+    if ratelimit.retry_after(rl_key) > 0:
+        return jsonify(ok=False, error="Trop de requêtes — réessaie dans un instant."), 429
+    ratelimit.register_failure(rl_key, max_attempts=60, window=60.0, block=120.0)
+
     data = request.get_json(silent=True) or {}
     delta = int(data.get("delta") or 0)
     delta = max(-100_000, min(100_000, delta))
     reason = (data.get("reason") or "Solo")[:120]
-    new_chips = casino_db.adjust_chips(
-        user.get("user_id") or user.get("id"), delta, reason=reason,
-    )
+
+    # M5 — plafond glissant sur les crédits positifs cumulés par joueur.
+    if delta > 0:
+        now = time.time()
+        with _cashout_lock:
+            dq = _cashout_credits.setdefault(uid, deque())
+            while dq and dq[0][0] < now - _CASHOUT_WINDOW:
+                dq.popleft()
+            credited = sum(amount for _, amount in dq)
+            if credited + delta > _CASHOUT_MAX_CREDIT:
+                print(f"[casino][M5] plafond cashout atteint uid={uid} "
+                      f"ip={_client_ip()} cumul={credited} delta={delta}", flush=True)
+                return jsonify(
+                    ok=False,
+                    error="Plafond de gains atteint — réessaie plus tard.",
+                ), 429
+            dq.append((now, delta))
+
+    new_chips = casino_db.adjust_chips(uid, delta, reason=reason)
     return jsonify(ok=True, chips=new_chips)
 
 
@@ -503,6 +540,13 @@ def _gc_rooms():
 
 @casino_bp.post("/casino/api/room/create")
 def api_room_create():
+    # M6 — limite de fréquence de création de rooms par IP (anti-DoS mémoire).
+    ip = _client_ip()
+    rl_key = f"casino-room-create:{ip}"
+    if ratelimit.retry_after(rl_key) > 0:
+        return jsonify(ok=False, error="Trop de parties créées — réessaie plus tard."), 429
+    ratelimit.register_failure(rl_key, max_attempts=10, window=300.0, block=600.0)
+
     data = request.get_json(silent=True) or {}
     host_name = (data.get("name") or "Hôte").strip() or "Hôte"
     max_players = max(2, min(6, int(data.get("max_players") or 6)))
@@ -510,6 +554,14 @@ def api_room_create():
     bb = max(2, int(data.get("big_blind") or 2 * sb))
     stack = max(100, int(data.get("starting_stack") or 2000))
     with _rooms_lock:
+        # M6 — plafond du nombre total de rooms en mémoire (anti-DoS).
+        if len(_rooms) >= _MAX_ROOMS:
+            print(f"[casino][M6] plafond de rooms atteint ({len(_rooms)}) ip={ip}",
+                  flush=True)
+            return jsonify(
+                ok=False,
+                error="Trop de parties en cours — réessaie plus tard.",
+            ), 503
         room = _new_room(host_name, max_players, (sb, bb), stack)
     return jsonify(ok=True, code=room["code"], host_id=room["host_id"],
                    room=_public_room(room))
@@ -616,9 +668,19 @@ def api_room_stream(code: str):
     code = code.upper().strip()
     pid = request.args.get("player_id") or ""
     since = int(request.args.get("since") or 0)
+
+    # M7 — plafond des flux SSE concurrents par IP : chaque flux monopolise un
+    # thread Waitress pour toute sa durée ; sans plafond, quelques connexions
+    # suffisent à saturer le serveur.
+    sse_key = f"casino-sse:{_client_ip()}"
+    if not ratelimit.acquire(sse_key, _MAX_SSE_PER_IP):
+        return jsonify(ok=False, error="Trop de connexions simultanées — ferme un onglet."), 429
+
     with _rooms_lock:
         room = _rooms.get(code)
-        if not room: return jsonify(ok=False, error="Room introuvable"), 404
+        if not room:
+            ratelimit.release(sse_key)
+            return jsonify(ok=False, error="Room introuvable"), 404
         backlog = [e for e in list(room["events"]) if e.get("seq", 0) > since
                    and (not e.get("to") or e["to"] == pid)]
         q: Queue = Queue(maxsize=64)
@@ -645,6 +707,7 @@ def api_room_stream(code: str):
         finally:
             try: room["subscribers"].remove(q)
             except (ValueError, KeyError): pass
+            ratelimit.release(sse_key)
 
     return Response(gen(), mimetype="text/event-stream",
                     headers={"Cache-Control": "no-cache",

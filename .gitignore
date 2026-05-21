@@ -28,3 +28,5 @@ mnwork.yml
 # Claude Code — permissions locales et log auto-push (déjà couvert par *.log mais explicite)
 .claude/settings.local.json
 .claude/auto-push.log
+# Worktrees git internes — ne JAMAIS versionner (audit M11)
+.claude/worktrees/

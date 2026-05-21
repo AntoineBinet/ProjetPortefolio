@@ -72,3 +72,31 @@ def client_ip() -> str:
             or (request.headers.get("X-Forwarded-For") or "").split(",")[0].strip()
             or request.remote_addr
             or "?")
+
+
+# ── Jauge de connexions concurrentes (anti-saturation SSE — M7) ──────────
+_active: dict[str, int] = {}       # clé -> nombre de connexions ouvertes
+
+
+def acquire(key: str, limit: int) -> bool:
+    """Réserve un slot de connexion concurrente pour `key`.
+
+    Renvoie True si le slot est accordé (le compteur était sous `limit`),
+    False sinon. Tout appel renvoyant True DOIT être suivi d'un `release(key)`
+    (typiquement dans un bloc `finally`)."""
+    with _lock:
+        n = _active.get(key, 0)
+        if n >= limit:
+            return False
+        _active[key] = n + 1
+        return True
+
+
+def release(key: str) -> None:
+    """Libère un slot réservé par `acquire`."""
+    with _lock:
+        n = _active.get(key, 0)
+        if n <= 1:
+            _active.pop(key, None)
+        else:
+            _active[key] = n - 1

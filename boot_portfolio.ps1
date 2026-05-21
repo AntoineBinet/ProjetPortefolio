@@ -4,7 +4,8 @@
 # Concu pour la tache planifiee Windows (au logon).
 
 $ErrorActionPreference = 'Continue'
-$portfolioDir = 'C:\Users\binet\Desktop\Portfolio'
+# Chemin dérivé dynamiquement du script (audit L4 — plus de chemin absolu en dur).
+$portfolioDir = $PSScriptRoot
 $flaskOut     = Join-Path $portfolioDir 'flask.out.log'
 $flaskErr     = Join-Path $portfolioDir 'flask.err.log'
 $tunnelOut    = Join-Path $portfolioDir 'tunnel.out.log'

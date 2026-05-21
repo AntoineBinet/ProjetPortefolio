@@ -35,7 +35,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import ratelimit
 
-APP_VERSION = "0.4.8"
+APP_VERSION = "0.4.9"
 APP_DIR = Path(__file__).resolve().parent
 PORT = int(os.environ.get("PORTFOLIO_PORT", "8001"))
 ADMIN_USER = os.environ.get("PORTFOLIO_USER", "admin")
@@ -272,6 +272,24 @@ def apps_page():
     return render_template("apps.html", projects=PROJECTS)
 
 
+def _safe_next(target: str | None) -> str:
+    """Empêche l'open redirect (M12) : n'accepte qu'un chemin relatif interne.
+
+    Rejette les URL absolues, protocol-relative (`//evil`), les schémas et les
+    antislashs (qu'un navigateur réinterprète en `/`). Repli : la page admin.
+    """
+    fallback = url_for("admin_parametres")
+    if not target:
+        return fallback
+    if "\\" in target or target.startswith("//") or not target.startswith("/"):
+        return fallback
+    from urllib.parse import urlparse
+    parsed = urlparse(target)
+    if parsed.scheme or parsed.netloc:
+        return fallback
+    return target
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     error = None
@@ -289,7 +307,7 @@ def login():
             ratelimit.reset(rl_key)
             session["user"] = u
             session.permanent = True
-            return redirect(request.args.get("next") or url_for("admin_parametres"))
+            return redirect(_safe_next(request.args.get("next")))
         ratelimit.register_failure(rl_key)
         error = "Identifiants invalides"
     return render_template("login.html", error=error)
@@ -401,7 +419,8 @@ def api_deploy_pull():
             yield f"data: {json.dumps({'step': 'fetch', 'message': 'git fetch origin main…'})}\n\n"
             fetch = _git("fetch", "--prune", "origin", "main", timeout=20)
             if fetch.returncode != 0:
-                yield f"data: {json.dumps({'step': 'error', 'error': fetch.stderr.strip() or 'fetch failed'})}\n\n"
+                app.logger.error("deploy pull: git fetch failed: %s", fetch.stderr.strip())
+                yield f"data: {json.dumps({'step': 'error', 'error': 'Échec du fetch git (détail dans les logs serveur)'})}\n\n"
                 return
 
             local = _git("rev-parse", "HEAD", timeout=2).stdout.strip()
@@ -433,7 +452,8 @@ def api_deploy_pull():
                 yield f"data: {json.dumps({'step': 'log', 'line': 'ff-only échoué → reset --hard origin/main'})}\n\n"
                 reset = _git("reset", "--hard", "origin/main", timeout=10)
                 if reset.returncode != 0:
-                    yield f"data: {json.dumps({'step': 'error', 'error': reset.stderr.strip()})}\n\n"
+                    app.logger.error("deploy pull: git reset failed: %s", reset.stderr.strip())
+                    yield f"data: {json.dumps({'step': 'error', 'error': 'Échec de la mise à jour (détail dans les logs serveur)'})}\n\n"
                     return
 
             req = APP_DIR / "requirements.txt"
@@ -457,8 +477,9 @@ def api_deploy_pull():
             yield f"data: {json.dumps({'step': 'done', 'updated': True, 'restarting': True, 'local_hash': local[:7], 'remote_hash': new_hash[:7], 'message': 'MAJ appliquée, redémarrage dans 10 s'})}\n\n"
         except subprocess.TimeoutExpired:
             yield f"data: {json.dumps({'step': 'error', 'error': 'Timeout'})}\n\n"
-        except Exception as e:
-            yield f"data: {json.dumps({'step': 'error', 'error': str(e)})}\n\n"
+        except Exception:
+            app.logger.exception("deploy pull failed")
+            yield f"data: {json.dumps({'step': 'error', 'error': 'Erreur interne (détail dans les logs serveur)'})}\n\n"
 
     return Response(gen(), mimetype="text/event-stream",
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
@@ -499,11 +520,13 @@ def api_deploy_pull_from_404():
         if pull.returncode != 0:
             reset = _git("reset", "--hard", "origin/main", timeout=10)
             if reset.returncode != 0:
-                return jsonify(ok=False, error=reset.stderr.strip()), 500
+                app.logger.error("deploy pull-from-404: git reset failed: %s", reset.stderr.strip())
+                return jsonify(ok=False, error="Échec de la mise à jour"), 500
         _schedule_restart(delay=5.0)
         return jsonify(ok=True, message="MAJ + redémarrage dans 5 s")
-    except Exception as e:
-        return jsonify(ok=False, error=str(e)), 500
+    except Exception:
+        app.logger.exception("deploy pull-from-404 failed")
+        return jsonify(ok=False, error="Erreur interne"), 500
 
 
 @deploy_bp.post("/api/deploy/rollback")
@@ -530,15 +553,18 @@ def api_deploy_rollback():
             return jsonify(ok=False, error=f"Commit {target[:7]} introuvable"), 400
         reset = _git("reset", "--hard", target, timeout=10)
         if reset.returncode != 0:
-            return jsonify(ok=False, error=reset.stderr.strip()), 500
+            app.logger.error("deploy rollback: git reset failed: %s", reset.stderr.strip())
+            return jsonify(ok=False, error="Échec du rollback"), 500
         _schedule_restart(delay=5.0)
         return jsonify(ok=True, message=f"Rollback vers {target[:7]} + redémarrage dans 5 s",
                        commit_hash=target[:7])
-    except Exception as e:
-        return jsonify(ok=False, error=str(e)), 500
+    except Exception:
+        app.logger.exception("deploy rollback failed")
+        return jsonify(ok=False, error="Erreur interne"), 500
 
 
 @deploy_bp.get("/api/deploy/health")
+@login_required
 def api_deploy_health():
     try:
         cur = _git("rev-parse", "HEAD", timeout=2).stdout.strip()[:7] or "unknown"
@@ -553,8 +579,9 @@ def api_deploy_health():
         return jsonify(ok=True, current_hash=cur, can_rollback=can_rollback,
                        rollback_hash=rb, version=APP_VERSION,
                        server_time=datetime.datetime.now().isoformat(timespec="seconds"))
-    except Exception as e:
-        return jsonify(ok=False, error=str(e)), 500
+    except Exception:
+        app.logger.exception("health check failed")
+        return jsonify(ok=False, error="Erreur interne"), 500
 
 
 @deploy_bp.post("/api/deploy/change-password")
@@ -867,6 +894,12 @@ if __name__ == "__main__":
     print(f"[Portfolio] v{APP_VERSION} -> http://127.0.0.1:{PORT}  (prod={is_prod})")
     if is_prod:
         from waitress import serve
-        serve(app, host="0.0.0.0", port=PORT, threads=8)
+        # M8 — écoute loopback uniquement : le tunnel Cloudflare se connecte en
+        # 127.0.0.1, et l'accès direct depuis le LAN (contournement du WAF
+        # Cloudflare) est coupé. M7 — pool de threads élargi : chaque flux SSE
+        # monopolise un thread pour toute sa durée de vie.
+        serve(app, host="127.0.0.1", port=PORT, threads=32)
     else:
-        app.run(host="0.0.0.0", port=PORT, debug=True, use_reloader=False)
+        # M8/M9 — loopback uniquement : le debugger interactif Werkzeug du mode
+        # dev n'est plus joignable depuis le réseau local.
+        app.run(host="127.0.0.1", port=PORT, debug=True, use_reloader=False)
